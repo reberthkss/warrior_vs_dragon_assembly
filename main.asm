@@ -15,32 +15,46 @@
     # --- GAME VARIABLES ---
     playerHP:       .word 100
     monsterHP:      .word 1000
-    playerDebt:     .word 0           # Player Debt
-    monsterDebt:    .word 0           # Monster Debt
-    debtLimit:      .word 5000        # Debt Limit
+    debtCounter:    .word 0           # Compound Debt Counter (0 to 10000)
+    debtLimit:      .word 10000       # Victory Limit (Debt-based victory)
     turn:           .word 0           # 0 = Player, 1 = Monster
     playerStunned:  .word 0           # 0 = Not stunned, 1 = Stunned
     dragonFlying:   .word 0           # 0 = On ground, 1 = Flying (increased evasion)
+    dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
+    playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Lance ability)
+    
+    # Compound Interest Rates
+    interestRate:   .word 10          # 10% interest rate
+    baseDamage:     .word 100         # Base damage to add to interest
 
     # --- MESSAGES ---
     msg_start:      .asciiz "\n--- FULL HD BATTLE (Unit 1) ---\n"
+    msg_start_info: .asciiz "Victory Conditions: Defeat Dragon OR reach 10,000 Debt!\n"
     msg_player_atk: .asciiz "\n[PLAYER] You attacked! "
+    msg_player_sword:.asciiz "\n[PLAYER] You used SWORD! The dragon is STUNNED!\n"
+    msg_player_flank:.asciiz "\n[PLAYER] You used FLANK! "
+    msg_player_lance:.asciiz "\n[PLAYER] You used LANCE! Your evasion is increased!\n"
+    msg_player_quiz:.asciiz "\n[PLAYER] You answered the AOC Quiz correctly! Applying compound interest!\n"
+    msg_debt_update:.asciiz "Debt Counter updated: "
     msg_monster_atk:.asciiz "\n[DRAGON] The monster breathed fire! "
     msg_stomp:      .asciiz "\n[DRAGON] The dragon stomped! You are STUNNED!\n"
     msg_fly:        .asciiz "\n[DRAGON] The dragon takes flight! Evasion increased!\n"
     msg_stunned:    .asciiz "[PLAYER] You are stunned and cannot attack this turn!\n"
+    msg_dragon_stunned: .asciiz "[DRAGON] The dragon is stunned and cannot attack this turn!\n"
     msg_damage:     .asciiz "Damage dealt: "
     msg_miss:       .asciiz "ATTACK MISSED!\n"
     msg_crit:       .asciiz "CRITICAL HIT!!! "
-    msg_win:        .asciiz "\n*** VICTORY! ***\n"
+    msg_choose_action: .asciiz "\n[PLAYER] Choose action: (1) Attack, (2) Sword, (3) Flank, (4) Lance, (5) Quiz - "
+    msg_win:        .asciiz "\n*** VICTORY! - Dragon Defeated! ***\n"
     msg_lose:       .asciiz "\n*** DEFEAT... ***\n"
-    msg_win_debt:   .asciiz "\n*** VICTORY BY DEBT! The dragon is in debt! ***\n"
+    msg_win_debt:   .asciiz "\n*** VICTORY BY COMPOUND INTEREST! Debt reached 10,000! ***\n"
     msg_lose_debt:  .asciiz "\n*** DEFEAT BY DEBT! You are too much in debt! ***\n"
     msg_status:     .asciiz "\n--- BATTLE STATUS ---\n"
     msg_player_hp:  .asciiz "Player - HP: "
-    msg_player_debt:.asciiz " | Debt: "
-    msg_monster_hp: .asciiz "Dragon - HP: "
-    msg_monster_debt:.asciiz " | Debt: "
+    msg_player_debt:.asciiz " | Debt Counter: "
+    msg_monster_hp: .asciiz "\nDragon - HP: "
+    msg_monster_debt:.asciiz "\n[DEBT COUNTER: "
+    msg_debt_limit: .asciiz " / 10,000]"
     newline:        .asciiz "\n"
 
 # --- MACROS ---
@@ -60,6 +74,9 @@ main:
     li $v0, 4
     la $a0, msg_start
     syscall
+    li $v0, 4
+    la $a0, msg_start_info
+    syscall
 
 game_loop:
     # 1. Check Game Over
@@ -69,11 +86,9 @@ game_loop:
     lw $t1, monsterHP
     blez $t1, game_over_win
     
-    # Check Debt
-    lw $t2, playerDebt
+    # Check Debt Counter (Compound Interest Victory)
+    lw $t2, debtCounter
     lw $t3, debtLimit
-    bge $t2, $t3, game_over_lose_debt
-    lw $t2, monsterDebt
     bge $t2, $t3, game_over_win_debt
 
     # 2. Show Battle Status
@@ -114,12 +129,30 @@ player_turn:
     j game_loop
     
 player_can_act:
-    li $v0, 12 
+    # Show action menu
+    li $v0, 4
+    la $a0, msg_choose_action
+    syscall
+    
+    # Get player input
+    li $v0, 5
     syscall
     move $t0, $v0
-    li $t1, 10
-    bne $t0, $t1, player_can_act
+    
+    # Check which action (1=Attack, 2=Sword, 3=Flank, 4=Lance, 5=Quiz)
+    li $t1, 1
+    beq $t0, $t1, player_normal_attack
+    li $t1, 2
+    beq $t0, $t1, player_sword_attack
+    li $t1, 3
+    beq $t0, $t1, player_flank_attack
+    li $t1, 4
+    beq $t0, $t1, player_lance_attack
+    li $t1, 5
+    beq $t0, $t1, player_quiz_attack
+    j player_can_act  # Invalid input, ask again
 
+player_normal_attack:
     li $v0, 4
     la $a0, msg_player_atk
     syscall
@@ -132,19 +165,153 @@ player_can_act:
     
     # Reset dragon flying status after attack
     sw $zero, dragonFlying
+    # Reset player evasion after attack
+    sw $zero, playerEvasion
     
     # Reduce Monster HP
     lw $t1, monsterHP
     sub $t1, $t1, $s0
     sw $t1, monsterHP
     
-    # Increase Monster Debt by 500 (only if attack hit)
+    # Apply Compound Interest on Debt Counter (only if attack hit)
     blez $s0, skip_debt_player
-    lw $t1, monsterDebt
-    addi $t1, $t1, 500
-    sw $t1, monsterDebt
+    jal apply_compound_interest
     skip_debt_player:
 
+    li $t0, 1
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500
+    syscall
+    j game_loop
+
+player_sword_attack:
+    # Sword ability - stuns the dragon (no damage)
+    li $v0, 4
+    la $a0, msg_player_sword
+    syscall
+    
+    # Set dragon as stunned
+    li $t0, 1
+    sw $t0, dragonStunned
+    
+    # No HP damage for sword ability, but increases debt counter
+    lw $t1, debtCounter
+    lw $a0, interestRate
+    lw $a1, baseDamage
+    jal apply_compound_interest_direct
+    move $t1, $v0
+    sw $t1, debtCounter
+    
+    # Reset dragon flying status and player evasion
+    sw $zero, dragonFlying
+    sw $zero, playerEvasion
+    
+    li $t0, 1
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500
+    syscall
+    j game_loop
+
+player_flank_attack:
+    # Flank ability - higher critical chance and increased base damage
+    li $v0, 4
+    la $a0, msg_player_flank
+    syscall
+
+    # Check if dragon is flying (increased evasion)
+    lw $t0, dragonFlying
+    move $a0, $t0
+    jal calculate_flank_damage
+    move $s0, $v0
+    
+    # Reset dragon flying status after attack
+    sw $zero, dragonFlying
+    # Reset player evasion after attack
+    sw $zero, playerEvasion
+    
+    # Reduce Monster HP
+    lw $t1, monsterHP
+    sub $t1, $t1, $s0
+    sw $t1, monsterHP
+    
+    # Apply Compound Interest on Debt Counter (only if attack hit)
+    blez $s0, skip_debt_flank
+    jal apply_compound_interest
+    skip_debt_flank:
+
+    li $t0, 1
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500
+    syscall
+    j game_loop
+
+player_lance_attack:
+    # Lance ability - defensive, increases evasion, lower damage
+    li $v0, 4
+    la $a0, msg_player_lance
+    syscall
+
+    # Check if dragon is flying (increased evasion)
+    lw $t0, dragonFlying
+    move $a0, $t0
+    jal calculate_lance_damage
+    move $s0, $v0
+    
+    # Reset dragon flying status after attack
+    sw $zero, dragonFlying
+    # Increase player evasion (NOT reset this turn)
+    li $t0, 1
+    sw $t0, playerEvasion
+    
+    # Reduce Monster HP
+    lw $t1, monsterHP
+    sub $t1, $t1, $s0
+    sw $t1, monsterHP
+    
+    # Apply Compound Interest on Debt Counter (only if attack hit)
+    blez $s0, skip_debt_lance
+    jal apply_compound_interest
+    skip_debt_lance:
+
+    li $t0, 1
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500
+    syscall
+    j game_loop
+
+player_quiz_attack:
+    # Quiz ability - applies compound interest directly (no damage)
+    # This is a placeholder until the real AOC quiz is implemented
+    li $v0, 4
+    la $a0, msg_player_quiz
+    syscall
+    
+    # Apply compound interest to debt counter
+    jal apply_compound_interest
+    
+    # Display updated debt counter
+    li $v0, 4
+    la $a0, msg_debt_update
+    syscall
+    li $v0, 1
+    lw $a0, debtCounter
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
+    # Reset player evasion and dragon flying
+    sw $zero, playerEvasion
+    sw $zero, dragonFlying
+    
     li $t0, 1
     sw $t0, turn
     
@@ -158,6 +325,28 @@ monster_turn:
     li $a0, 1000
     syscall
 
+    # Check if dragon is stunned
+    lw $t0, dragonStunned
+    beqz $t0, dragon_can_act
+    
+    # Dragon is stunned, skip turn
+    li $v0, 4
+    la $a0, msg_dragon_stunned
+    syscall
+    
+    # Reset stun status
+    sw $zero, dragonStunned
+    
+    # Change to player turn
+    li $t0, 0
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 1000
+    syscall
+    j game_loop
+
+dragon_can_act:
     # Dragon randomly chooses attack type
     # 33% Fire Breath, 33% Stomp, 33% Fly
     li $v0, 42
@@ -174,6 +363,8 @@ monster_turn:
     la $a0, msg_monster_atk
     syscall
 
+    # Check player evasion
+    lw $a0, playerEvasion
     jal calculate_dragon_damage
     move $s0, $v0
 
@@ -182,12 +373,14 @@ monster_turn:
     sub $t1, $t1, $s0
     sw $t1, playerHP
     
-    # Increase Player Debt by 500 (only if attack hit)
+    # Apply Dragon Debt Payment (only if attack hit)
+    # Dragon pays 5% of current debt
     blez $s0, skip_debt_monster
-    lw $t1, playerDebt
-    addi $t1, $t1, 500
-    sw $t1, playerDebt
+    jal apply_dragon_payment
     skip_debt_monster:
+
+    # Reset player evasion after dragon attack
+    sw $zero, playerEvasion
 
     li $t0, 0
     sw $t0, turn
@@ -282,15 +475,28 @@ print_damage:
     jr $ra
 
 calculate_dragon_damage:
+    # $a0 = 1 if player has evasion (reduced hit chance), 0 otherwise
     # Dragon has only 30% chance to hit (0-29 hits, 30-99 misses)
+    # If player has evasion, dragon needs 50+ to hit (50% miss instead of 70%)
+    move $t9, $a0  # Save evasion status
+    
     li $v0, 42
     li $a0, 0
     li $a1, 100
     syscall
     move $t0, $a0
+    
+    # If player has evasion, dragon needs 50+ to hit
+    beqz $t9, dragon_normal_hit_check
+    blt $t0, 50, attack_missed
+    bge $t0, 95, dragon_critical_hit
+    j dragon_normal_damage
+    
+    dragon_normal_hit_check:
     bge $t0, 30, attack_missed  # 70% chance to miss
     bge $t0, 25, dragon_critical_hit  # 5% chance of critical
 
+    dragon_normal_damage:
     # Normal attack - High damage (20-35)
     li $v0, 42
     li $a0, 0
@@ -305,6 +511,148 @@ dragon_critical_hit:
     syscall
     li $v0, 50
     j print_damage
+
+calculate_flank_damage:
+    # $a0 = 1 if dragon is flying (reduced hit chance), 0 otherwise
+    # Flank has same hit chance as normal attack but HIGHER critical chance (40%)
+    # Base damage is increased: 15-24 instead of 10-19
+    # Critical damage: 30 instead of 25
+    move $t9, $a0  # Save flying status
+    
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $a0
+    
+    # If dragon is flying, player needs 50+ to hit (50% miss instead of 20%)
+    beqz $t9, flank_normal_hit_check
+    blt $t0, 50, attack_missed
+    bge $t0, 60, flank_critical_hit  # 40% critical chance (60-99)
+    j flank_normal_damage
+    
+    flank_normal_hit_check:
+    blt $t0, 20, attack_missed
+    bge $t0, 60, flank_critical_hit  # 40% critical chance (60-99)
+
+    flank_normal_damage:
+    # Damage: 15-24
+    li $v0, 42
+    li $a0, 0
+    li $a1, 10
+    syscall
+    addi $v0, $a0, 15
+    j print_damage
+
+flank_critical_hit:
+    li $v0, 4
+    la $a0, msg_crit
+    syscall
+    li $v0, 30
+    j print_damage
+
+calculate_lance_damage:
+    # $a0 = 1 if dragon is flying (reduced hit chance), 0 otherwise
+    # Lance is defensive: lower damage (5-9), same hit chance as normal attack
+    # Critical chance: 15% (same as normal attack)
+    # Critical damage: 15 (lower than normal)
+    move $t9, $a0  # Save flying status
+    
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $a0
+    
+    # If dragon is flying, player needs 50+ to hit (50% miss instead of 20%)
+    beqz $t9, lance_normal_hit_check
+    blt $t0, 50, attack_missed
+    bge $t0, 90, lance_critical_hit
+    j lance_normal_damage
+    
+    lance_normal_hit_check:
+    blt $t0, 20, attack_missed
+    bge $t0, 85, lance_critical_hit
+
+    lance_normal_damage:
+    # Damage: 5-9 (lowest of all attacks)
+    li $v0, 42
+    li $a0, 0
+    li $a1, 5
+    syscall
+    addi $v0, $a0, 5
+    j print_damage
+
+lance_critical_hit:
+    li $v0, 4
+    la $a0, msg_crit
+    syscall
+    li $v0, 15
+    j print_damage
+
+# ----------------------------------------------------------------
+# COMPOUND INTEREST FUNCTIONS
+# ----------------------------------------------------------------
+apply_compound_interest:
+    # Apply compound interest to debt counter
+    # Formula: newDebt = currentDebt + (currentDebt * rate / 100) + baseDamage
+    # Returns with updated debtCounter
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    lw $t0, debtCounter
+    lw $t1, interestRate      # Rate = 10
+    lw $t2, baseDamage        # Base = 100
+    
+    # Calculate (currentDebt * rate / 100)
+    mul $t3, $t0, $t1         # t3 = debt * 10
+    div $t3, $t3, 100         # t3 = (debt * 10) / 100
+    
+    # Add base damage and interest
+    add $t0, $t0, $t3
+    add $t0, $t0, $t2
+    
+    # Cap at debtLimit
+    lw $t4, debtLimit
+    blt $t0, $t4, store_debt
+    move $t0, $t4
+    store_debt:
+    sw $t0, debtCounter
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+apply_compound_interest_direct:
+    # Apply compound interest with given debt and rate
+    # $a0 = rate, $a1 = base, returns in $v0
+    # Current debt is in $t1 (on entry)
+    mul $t3, $t1, $a0
+    div $t3, $t3, 100
+    add $v0, $t1, $t3
+    add $v0, $v0, $a1
+    jr $ra
+
+apply_dragon_payment:
+    # Dragon pays 5% of current debt counter
+    # Formula: newDebt = currentDebt - (currentDebt * 5 / 100)
+    lw $t0, debtCounter
+    lw $t1, debtCounter
+    
+    # Calculate (currentDebt * 5 / 100)
+    mul $t3, $t1, 5
+    div $t3, $t3, 100
+    
+    # Subtract payment from debt
+    sub $t0, $t0, $t3
+    
+    # Don't let debt go below 0
+    bge $t0, 0, store_payment
+    li $t0, 0
+    store_payment:
+    sw $t0, debtCounter
+    
+    jr $ra
 
 # ----------------------------------------------------------------
 # UPDATED GRAPHICS ENGINE (Resolution 256x256)
@@ -487,12 +835,6 @@ show_status:
     lw $a0, playerHP
     syscall
     li $v0, 4
-    la $a0, msg_player_debt
-    syscall
-    li $v0, 1
-    lw $a0, playerDebt
-    syscall
-    li $v0, 4
     la $a0, newline
     syscall
     
@@ -504,10 +846,18 @@ show_status:
     lw $a0, monsterHP
     syscall
     li $v0, 4
+    la $a0, newline
+    syscall
+    
+    # Debt Counter (Unified)
+    li $v0, 4
     la $a0, msg_monster_debt
     syscall
     li $v0, 1
-    lw $a0, monsterDebt
+    lw $a0, debtCounter
+    syscall
+    li $v0, 4
+    la $a0, msg_debt_limit
     syscall
     li $v0, 4
     la $a0, newline
@@ -535,12 +885,6 @@ game_over_lose:
 game_over_win_debt:
     li $v0, 4
     la $a0, msg_win_debt
-    syscall
-    j exit
-
-game_over_lose_debt:
-    li $v0, 4
-    la $a0, msg_lose_debt
     syscall
     j exit
 
