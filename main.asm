@@ -129,7 +129,7 @@ turno_monstro:
     la $a0, msg_monster_atk
     syscall
 
-    jal calcular_dano_ataque
+    jal calcular_dano_dragao
     move $s0, $v0
 
     # Reduzir HP do jogador
@@ -191,6 +191,31 @@ imprime_dano:
     syscall
     move $v0, $t9
     jr $ra
+
+calcular_dano_dragao:
+    # Dragão tem apenas 30% de chance de acertar (0-29 acerta, 30-99 erra)
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $a0
+    bge $t0, 30, ataque_errou  # 70% de chance de errar
+    bge $t0, 25, ataque_critico_dragao  # 5% de chance de crítico
+
+    # Ataque normal
+    li $v0, 42
+    li $a0, 0
+    li $a1, 10
+    syscall
+    addi $v0, $a0, 10
+    j imprime_dano
+
+ataque_critico_dragao:
+    li $v0, 4
+    la $a0, msg_crit
+    syscall
+    li $v0, 25
+    j imprime_dano
 
 # ----------------------------------------------------------------
 # MOTOR GRÁFICO ATUALIZADO (Resolução 256x256)
