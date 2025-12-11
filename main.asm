@@ -19,11 +19,16 @@
     monsterDebt:    .word 0           # Monster Debt
     debtLimit:      .word 5000        # Debt Limit
     turn:           .word 0           # 0 = Player, 1 = Monster
+    playerStunned:  .word 0           # 0 = Not stunned, 1 = Stunned
+    dragonFlying:   .word 0           # 0 = On ground, 1 = Flying (increased evasion)
 
     # --- MESSAGES ---
     msg_start:      .asciiz "\n--- FULL HD BATTLE (Unit 1) ---\n"
     msg_player_atk: .asciiz "\n[PLAYER] You attacked! "
     msg_monster_atk:.asciiz "\n[DRAGON] The monster breathed fire! "
+    msg_stomp:      .asciiz "\n[DRAGON] The dragon stomped! You are STUNNED!\n"
+    msg_fly:        .asciiz "\n[DRAGON] The dragon takes flight! Evasion increased!\n"
+    msg_stunned:    .asciiz "[PLAYER] You are stunned and cannot attack this turn!\n"
     msg_damage:     .asciiz "Damage dealt: "
     msg_miss:       .asciiz "ATTACK MISSED!\n"
     msg_crit:       .asciiz "CRITICAL HIT!!! "
@@ -87,18 +92,46 @@ game_loop:
 # BATTLE LOGIC
 # ----------------------------------------------------------------
 player_turn:
+    # Check if player is stunned
+    lw $t0, playerStunned
+    beqz $t0, player_can_act
+    
+    # Player is stunned, skip turn
+    li $v0, 4
+    la $a0, msg_stunned
+    syscall
+    
+    # Reset stun status
+    sw $zero, playerStunned
+    
+    # Change to monster turn
+    li $t0, 1
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 1000
+    syscall
+    j game_loop
+    
+player_can_act:
     li $v0, 12 
     syscall
     move $t0, $v0
     li $t1, 10
-    bne $t0, $t1, player_turn
+    bne $t0, $t1, player_can_act
 
     li $v0, 4
     la $a0, msg_player_atk
     syscall
 
+    # Check if dragon is flying (increased evasion)
+    lw $t0, dragonFlying
+    move $a0, $t0
     jal calculate_attack_damage
     move $s0, $v0
+    
+    # Reset dragon flying status after attack
+    sw $zero, dragonFlying
     
     # Reduce Monster HP
     lw $t1, monsterHP
@@ -125,6 +158,18 @@ monster_turn:
     li $a0, 1000
     syscall
 
+    # Dragon randomly chooses attack type
+    # 33% Fire Breath, 33% Stomp, 33% Fly
+    li $v0, 42
+    li $a0, 0
+    li $a1, 3
+    syscall
+    move $t0, $a0
+    
+    beq $t0, 1, dragon_stomp
+    beq $t0, 2, dragon_fly
+    
+    # Fire Breath Attack
     li $v0, 4
     la $a0, msg_monster_atk
     syscall
@@ -148,15 +193,59 @@ monster_turn:
     sw $t0, turn
     j game_loop
 
-calculate_attack_damage:ge:
+dragon_stomp:
+    # Stomp attack - stuns the player
+    li $v0, 4
+    la $a0, msg_stomp
+    syscall
+    
+    # Set player as stunned
+    li $t0, 1
+    sw $t0, playerStunned
+    
+    # No HP damage, no debt for stomp
+    
+    li $t0, 0
+    sw $t0, turn
+    j game_loop
+
+dragon_fly:
+    # Fly attack - increases dragon evasion
+    li $v0, 4
+    la $a0, msg_fly
+    syscall
+    
+    # Set dragon as flying (increased evasion)
+    li $t0, 1
+    sw $t0, dragonFlying
+    
+    # No HP damage, no debt for fly
+    
+    li $t0, 0
+    sw $t0, turn
+    j game_loop
+
+calculate_attack_damage:
+    # $a0 = 1 if dragon is flying (reduced hit chance), 0 otherwise
+    move $t9, $a0  # Save flying status
+    
     li $v0, 42
     li $a0, 0
     li $a1, 100
     syscall
     move $t0, $a0
+    
+    # If dragon is flying, player needs 50+ to hit (50% miss instead of 20%)
+    beqz $t9, normal_hit_check
+    blt $t0, 50, attack_missed
+    bge $t0, 90, critical_hit
+    j normal_damage
+    
+    normal_hit_check:
     blt $t0, 20, attack_missed
     bge $t0, 85, critical_hit
 
+    normal_damage:
     li $v0, 42
     li $a0, 0
     li $a1, 10
@@ -202,19 +291,19 @@ calculate_dragon_damage:
     bge $t0, 30, attack_missed  # 70% chance to miss
     bge $t0, 25, dragon_critical_hit  # 5% chance of critical
 
-    # Normal attack
+    # Normal attack - High damage (20-35)
     li $v0, 42
     li $a0, 0
-    li $a1, 10
+    li $a1, 16
     syscall
-    addi $v0, $a0, 10
+    addi $v0, $a0, 20
     j print_damage
 
 dragon_critical_hit:
     li $v0, 4
     la $a0, msg_crit
     syscall
-    li $v0, 25
+    li $v0, 50
     j print_damage
 
 # ----------------------------------------------------------------
@@ -245,8 +334,9 @@ render_all:
     jal draw_sprite_pro
 
     # 4. Health Bars (Increased for new resolution)
-    # Player Bar
+    # Player Bar (100 HP max = 50 pixels max)
     lw $t0, playerHP
+    blez $t0, skip_hp_player
     div $t0, $t0, 2     # Scale (100 HP = 50 pixels)
     mflo $a2
     blez $a2, skip_hp_player
@@ -257,9 +347,10 @@ render_all:
     jal func_draw_rect
     skip_hp_player:
 
-    # Dragon Bar
+    # Dragon Bar (1000 HP max = 50 pixels max)
     lw $t0, monsterHP
-    div $t0, $t0, 2
+    blez $t0, skip_hp_monster
+    div $t0, $t0, 20    # Scale (1000 HP = 50 pixels)
     mflo $a2
     blez $a2, skip_hp_monster
     li $a0, 180
