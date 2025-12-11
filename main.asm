@@ -14,7 +14,10 @@
 
     # --- VARIÁVEIS DE JOGO ---
     playerHP:       .word 100
-    monsterHP:      .word 100
+    monsterHP:      .word 1000
+    playerDebt:     .word 0           # Dívida do Jogador
+    monsterDebt:    .word 0           # Dívida do Monstro
+    debtLimit:      .word 5000        # Limite de Dívida
     turno:          .word 0           # 0 = Jogador, 1 = Monstro
 
     # --- TEXTOS ---
@@ -26,6 +29,13 @@
     msg_crit:       .asciiz "CRITICO!!! "
     msg_win:        .asciiz "\n*** VITORIA! ***\n"
     msg_lose:       .asciiz "\n*** DERROTA... ***\n"
+    msg_win_debt:   .asciiz "\n*** VITORIA POR DIVIDA! O dragao esta endividado! ***\n"
+    msg_lose_debt:  .asciiz "\n*** DERROTA POR DIVIDA! Voce esta muito endividado! ***\n"
+    msg_status:     .asciiz "\n--- STATUS DA BATALHA ---\n"
+    msg_player_hp:  .asciiz "Jogador - HP: "
+    msg_player_debt:.asciiz " | Divida: "
+    msg_monster_hp: .asciiz "Dragao  - HP: "
+    msg_monster_debt:.asciiz " | Divida: "
     newline:        .asciiz "\n"
 
 # --- MACROS ---
@@ -48,15 +58,26 @@ main:
 
 loop_jogo:
     # 1. Verificar Fim de Jogo
+    # Verificar HP
     lw $t0, playerHP
     blez $t0, game_over_lose
     lw $t1, monsterHP
     blez $t1, game_over_win
+    
+    # Verificar Dívida
+    lw $t2, playerDebt
+    lw $t3, debtLimit
+    bge $t2, $t3, game_over_lose_debt
+    lw $t2, monsterDebt
+    bge $t2, $t3, game_over_win_debt
 
-    # 2. Renderizar (Agora em Full Res)
+    # 2. Mostrar Status da Batalha
+    jal mostrar_status
+
+    # 3. Renderizar (Agora em Full Res)
     jal renderizar_tudo
 
-    # 3. Lógica de Turnos
+    # 4. Lógica de Turnos
     lw $t0, turno
     beq $t0, 0, turno_jogador
     beq $t0, 1, turno_monstro
@@ -79,9 +100,17 @@ turno_jogador:
     jal calcular_dano_ataque
     move $s0, $v0
     
+    # Reduzir HP do monstro
     lw $t1, monsterHP
     sub $t1, $t1, $s0
     sw $t1, monsterHP
+    
+    # Aumentar Dívida do monstro em 500 (apenas se o ataque acertou)
+    blez $s0, skip_debt_player
+    lw $t1, monsterDebt
+    addi $t1, $t1, 500
+    sw $t1, monsterDebt
+    skip_debt_player:
 
     li $t0, 1
     sw $t0, turno
@@ -103,9 +132,17 @@ turno_monstro:
     jal calcular_dano_ataque
     move $s0, $v0
 
+    # Reduzir HP do jogador
     lw $t1, playerHP
     sub $t1, $t1, $s0
     sw $t1, playerHP
+    
+    # Aumentar Dívida do jogador em 500 (apenas se o ataque acertou)
+    blez $s0, skip_debt_monster
+    lw $t1, playerDebt
+    addi $t1, $t1, 500
+    sw $t1, playerDebt
+    skip_debt_monster:
 
     li $t0, 0
     sw $t0, turno
@@ -314,6 +351,59 @@ func_desenhar_rect:
     fim_desenho_rect:
     jr $ra
 
+# ----------------------------------------------------------------
+# FUNÇÃO: MOSTRAR STATUS DA BATALHA
+# ----------------------------------------------------------------
+mostrar_status:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    # Título
+    li $v0, 4
+    la $a0, msg_status
+    syscall
+    
+    # Status do Jogador
+    li $v0, 4
+    la $a0, msg_player_hp
+    syscall
+    li $v0, 1
+    lw $a0, playerHP
+    syscall
+    li $v0, 4
+    la $a0, msg_player_debt
+    syscall
+    li $v0, 1
+    lw $a0, playerDebt
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
+    # Status do Dragão
+    li $v0, 4
+    la $a0, msg_monster_hp
+    syscall
+    li $v0, 1
+    lw $a0, monsterHP
+    syscall
+    li $v0, 4
+    la $a0, msg_monster_debt
+    syscall
+    li $v0, 1
+    lw $a0, monsterDebt
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+# ----------------------------------------------------------------
+# FINS DE JOGO
+# ----------------------------------------------------------------
 game_over_win:
     li $v0, 4
     la $a0, msg_win
@@ -323,6 +413,18 @@ game_over_win:
 game_over_lose:
     li $v0, 4
     la $a0, msg_lose
+    syscall
+    j exit
+
+game_over_win_debt:
+    li $v0, 4
+    la $a0, msg_win_debt
+    syscall
+    j exit
+
+game_over_lose_debt:
+    li $v0, 4
+    la $a0, msg_lose_debt
     syscall
     j exit
 
