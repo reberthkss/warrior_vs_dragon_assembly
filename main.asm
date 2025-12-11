@@ -1,51 +1,51 @@
 .data
-    # --- IMPORTANDO OS SPRITES (Assets) ---
+    # --- IMPORTING SPRITES (Assets) ---
     .include "sprites.asm"
 
-    # --- ENDEREÇOS ---
+    # --- ADDRESSES ---
     displayAddress: .word 0x10040000
 
-    # --- CORES GERAIS ---
-    COR_FUNDO:      .word 0x228B22    # Verde Grama
-    COR_CEU:        .word 0x87CEEB    # Azul Ceu
-    COR_HP_CHEIO:   .word 0x00FF00    # Verde Vida
-    COR_HP_DANO:    .word 0xFF0000    # Vermelho Dano
-    COR_CURSOR:     .word 0xFFFF00    # Amarelo
+    # --- GENERAL COLORS ---
+    COLOR_GROUND:   .word 0x228B22    # Grass Green
+    COLOR_SKY:      .word 0x87CEEB    # Sky Blue
+    COLOR_HP_FULL:  .word 0x00FF00    # Life Green
+    COLOR_HP_DMG:   .word 0xFF0000    # Damage Red
+    COLOR_CURSOR:   .word 0xFFFF00    # Yellow
 
-    # --- VARIÁVEIS DE JOGO ---
+    # --- GAME VARIABLES ---
     playerHP:       .word 100
     monsterHP:      .word 1000
-    playerDebt:     .word 0           # Dívida do Jogador
-    monsterDebt:    .word 0           # Dívida do Monstro
-    debtLimit:      .word 5000        # Limite de Dívida
-    turno:          .word 0           # 0 = Jogador, 1 = Monstro
+    playerDebt:     .word 0           # Player Debt
+    monsterDebt:    .word 0           # Monster Debt
+    debtLimit:      .word 5000        # Debt Limit
+    turn:           .word 0           # 0 = Player, 1 = Monster
 
-    # --- TEXTOS ---
-    msg_inicio:     .asciiz "\n--- BATALHA FULL HD (Unit 1) ---\n"
-    msg_player_atk: .asciiz "\n[JOGADOR] Voce atacou! "
-    msg_monster_atk:.asciiz "\n[DRAGAO] O monstro cuspiu fogo! "
-    msg_dano:       .asciiz "Dano causado: "
-    msg_miss:       .asciiz "ERROU O ATAQUE!\n"
-    msg_crit:       .asciiz "CRITICO!!! "
-    msg_win:        .asciiz "\n*** VITORIA! ***\n"
-    msg_lose:       .asciiz "\n*** DERROTA... ***\n"
-    msg_win_debt:   .asciiz "\n*** VITORIA POR DIVIDA! O dragao esta endividado! ***\n"
-    msg_lose_debt:  .asciiz "\n*** DERROTA POR DIVIDA! Voce esta muito endividado! ***\n"
-    msg_status:     .asciiz "\n--- STATUS DA BATALHA ---\n"
-    msg_player_hp:  .asciiz "Jogador - HP: "
-    msg_player_debt:.asciiz " | Divida: "
-    msg_monster_hp: .asciiz "Dragao  - HP: "
-    msg_monster_debt:.asciiz " | Divida: "
+    # --- MESSAGES ---
+    msg_start:      .asciiz "\n--- FULL HD BATTLE (Unit 1) ---\n"
+    msg_player_atk: .asciiz "\n[PLAYER] You attacked! "
+    msg_monster_atk:.asciiz "\n[DRAGON] The monster breathed fire! "
+    msg_damage:     .asciiz "Damage dealt: "
+    msg_miss:       .asciiz "ATTACK MISSED!\n"
+    msg_crit:       .asciiz "CRITICAL HIT!!! "
+    msg_win:        .asciiz "\n*** VICTORY! ***\n"
+    msg_lose:       .asciiz "\n*** DEFEAT... ***\n"
+    msg_win_debt:   .asciiz "\n*** VICTORY BY DEBT! The dragon is in debt! ***\n"
+    msg_lose_debt:  .asciiz "\n*** DEFEAT BY DEBT! You are too much in debt! ***\n"
+    msg_status:     .asciiz "\n--- BATTLE STATUS ---\n"
+    msg_player_hp:  .asciiz "Player - HP: "
+    msg_player_debt:.asciiz " | Debt: "
+    msg_monster_hp: .asciiz "Dragon - HP: "
+    msg_monster_debt:.asciiz " | Debt: "
     newline:        .asciiz "\n"
 
 # --- MACROS ---
-.macro desenhar_retangulo(%x, %y, %w, %h, %cor_label)
+.macro draw_rectangle(%x, %y, %w, %h, %color_label)
     li $a0, %x
     li $a1, %y
     li $a2, %w
     li $v1, %h
-    lw $a3, %cor_label
-    jal func_desenhar_rect
+    lw $a3, %color_label
+    jal func_draw_rect
 .end_macro
 
 .text
@@ -53,59 +53,59 @@
 
 main:
     li $v0, 4
-    la $a0, msg_inicio
+    la $a0, msg_start
     syscall
 
-loop_jogo:
-    # 1. Verificar Fim de Jogo
-    # Verificar HP
+game_loop:
+    # 1. Check Game Over
+    # Check HP
     lw $t0, playerHP
     blez $t0, game_over_lose
     lw $t1, monsterHP
     blez $t1, game_over_win
     
-    # Verificar Dívida
+    # Check Debt
     lw $t2, playerDebt
     lw $t3, debtLimit
     bge $t2, $t3, game_over_lose_debt
     lw $t2, monsterDebt
     bge $t2, $t3, game_over_win_debt
 
-    # 2. Mostrar Status da Batalha
-    jal mostrar_status
+    # 2. Show Battle Status
+    jal show_status
 
-    # 3. Renderizar (Agora em Full Res)
-    jal renderizar_tudo
+    # 3. Render (Now in Full Res)
+    jal render_all
 
-    # 4. Lógica de Turnos
-    lw $t0, turno
-    beq $t0, 0, turno_jogador
-    beq $t0, 1, turno_monstro
-    j loop_jogo
+    # 4. Turn Logic
+    lw $t0, turn
+    beq $t0, 0, player_turn
+    beq $t0, 1, monster_turn
+    j game_loop
 
 # ----------------------------------------------------------------
-# LÓGICA DE BATALHA
+# BATTLE LOGIC
 # ----------------------------------------------------------------
-turno_jogador:
+player_turn:
     li $v0, 12 
     syscall
     move $t0, $v0
     li $t1, 10
-    bne $t0, $t1, turno_jogador
+    bne $t0, $t1, player_turn
 
     li $v0, 4
     la $a0, msg_player_atk
     syscall
 
-    jal calcular_dano_ataque
+    jal calculate_attack_damage
     move $s0, $v0
     
-    # Reduzir HP do monstro
+    # Reduce Monster HP
     lw $t1, monsterHP
     sub $t1, $t1, $s0
     sw $t1, monsterHP
     
-    # Aumentar Dívida do monstro em 500 (apenas se o ataque acertou)
+    # Increase Monster Debt by 500 (only if attack hit)
     blez $s0, skip_debt_player
     lw $t1, monsterDebt
     addi $t1, $t1, 500
@@ -113,14 +113,14 @@ turno_jogador:
     skip_debt_player:
 
     li $t0, 1
-    sw $t0, turno
+    sw $t0, turn
     
     li $v0, 32
     li $a0, 500
     syscall
-    j loop_jogo
+    j game_loop
 
-turno_monstro:
+monster_turn:
     li $v0, 32
     li $a0, 1000
     syscall
@@ -129,15 +129,15 @@ turno_monstro:
     la $a0, msg_monster_atk
     syscall
 
-    jal calcular_dano_dragao
+    jal calculate_dragon_damage
     move $s0, $v0
 
-    # Reduzir HP do jogador
+    # Reduce Player HP
     lw $t1, playerHP
     sub $t1, $t1, $s0
     sw $t1, playerHP
     
-    # Aumentar Dívida do jogador em 500 (apenas se o ataque acertou)
+    # Increase Player Debt by 500 (only if attack hit)
     blez $s0, skip_debt_monster
     lw $t1, playerDebt
     addi $t1, $t1, 500
@@ -145,43 +145,43 @@ turno_monstro:
     skip_debt_monster:
 
     li $t0, 0
-    sw $t0, turno
-    j loop_jogo
+    sw $t0, turn
+    j game_loop
 
-calcular_dano_ataque:
+calculate_attack_damage:ge:
     li $v0, 42
     li $a0, 0
     li $a1, 100
     syscall
     move $t0, $a0
-    blt $t0, 20, ataque_errou
-    bge $t0, 85, ataque_critico
+    blt $t0, 20, attack_missed
+    bge $t0, 85, critical_hit
 
     li $v0, 42
     li $a0, 0
     li $a1, 10
     syscall
     addi $v0, $a0, 10
-    j imprime_dano
+    j print_damage
 
-ataque_critico:
+critical_hit:
     li $v0, 4
     la $a0, msg_crit
     syscall
     li $v0, 25
-    j imprime_dano
+    j print_damage
 
-ataque_errou:
+attack_missed:
     li $v0, 4
     la $a0, msg_miss
     syscall
     li $v0, 0
     jr $ra
 
-imprime_dano:
+print_damage:
     move $t9, $v0
     li $v0, 4
-    la $a0, msg_dano
+    la $a0, msg_damage
     syscall
     li $v0, 1
     move $a0, $t9
@@ -192,72 +192,72 @@ imprime_dano:
     move $v0, $t9
     jr $ra
 
-calcular_dano_dragao:
-    # Dragão tem apenas 30% de chance de acertar (0-29 acerta, 30-99 erra)
+calculate_dragon_damage:
+    # Dragon has only 30% chance to hit (0-29 hits, 30-99 misses)
     li $v0, 42
     li $a0, 0
     li $a1, 100
     syscall
     move $t0, $a0
-    bge $t0, 30, ataque_errou  # 70% de chance de errar
-    bge $t0, 25, ataque_critico_dragao  # 5% de chance de crítico
+    bge $t0, 30, attack_missed  # 70% chance to miss
+    bge $t0, 25, dragon_critical_hit  # 5% chance of critical
 
-    # Ataque normal
+    # Normal attack
     li $v0, 42
     li $a0, 0
     li $a1, 10
     syscall
     addi $v0, $a0, 10
-    j imprime_dano
+    j print_damage
 
-ataque_critico_dragao:
+dragon_critical_hit:
     li $v0, 4
     la $a0, msg_crit
     syscall
     li $v0, 25
-    j imprime_dano
+    j print_damage
 
 # ----------------------------------------------------------------
-# MOTOR GRÁFICO ATUALIZADO (Resolução 256x256)
+# UPDATED GRAPHICS ENGINE (Resolution 256x256)
 # ----------------------------------------------------------------
-renderizar_tudo:
+render_all:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
 
-    # 1. Limpar Tela
-    # Céu: ocupa topo até linha 200 (de 256)
-    desenhar_retangulo(0, 0, 256, 200, COR_CEU)
-    # Chão: linha 200 até 256
-    desenhar_retangulo(0, 200, 256, 56, COR_FUNDO)
+    # 1. Clear Screen
+    # Sky: occupies top to line 200 (of 256)
+    draw_rectangle(0, 0, 256, 200, COLOR_SKY)
+    # Ground: line 200 to 256
+    draw_rectangle(0, 200, 256, 56, COLOR_GROUND)
 
-    # 2. Desenhar Guerreiro
-    # Posicionado no chão (Y=190 aprox)
+    # 2. Draw Warrior
+    # Positioned on ground (Y=190 approx)
     li $a0, 50             # X
     li $a1, 185            # Y
     la $a2, sprite_player
-    jal desenhar_sprite_pro
+    jal draw_sprite_pro
 
-    # 3. Desenhar Dragão
-    # Posicionado no chão lado direito
+    # 3. Draw Dragon
+    # Positioned on ground right side
     li $a0, 180            # X
     li $a1, 185            # Y
     la $a2, sprite_dragon
-    jal desenhar_sprite_pro
+    jal draw_sprite_pro
 
-    # 4. Barras de Vida (Aumentadas para resolução nova)
-    # Barra Player
+    # 4. Health Bars (Increased for new resolution)
+    # Player Bar
     lw $t0, playerHP
-    div $t0, $t0, 2     # Escala (100 HP = 50 pixels)
+    div $t0, $t0, 2     # Scale (100 HP = 50 pixels)
     mflo $a2
     blez $a2, skip_hp_player
     li $a0, 50
     li $a1, 175
-    li $v1, 4           # Altura 4 pixels
-    lw $a3, COR_HP_CHEIO
-    jal func_desenhar_rect
+    li $v1, 4           # Height 4 pixels
+    lw $a3, COLOR_HP_FULL
+    jal func_draw_rect
     skip_hp_player:
 
-    # Barra Dragão
+    # Dragon Bar
     lw $t0, monsterHP
     div $t0, $t0, 2
     mflo $a2
@@ -265,54 +265,54 @@ renderizar_tudo:
     li $a0, 180
     li $a1, 175
     li $v1, 4
-    lw $a3, COR_HP_CHEIO
-    jal func_desenhar_rect
+    lw $a3, COLOR_HP_FULL
+    jal func_draw_rect
     skip_hp_monster:
 
     # 5. Cursor
-    lw $t0, turno
-    beq $t0, 1, cursor_dragao
-    desenhar_retangulo(60, 160, 10, 5, COR_CURSOR) # Perto do player
-    j fim_render
-    cursor_dragao:
-    desenhar_retangulo(190, 160, 10, 5, COR_CURSOR) # Perto do dragão
+    lw $t0, turn
+    beq $t0, 1, cursor_dragon
+    draw_rectangle(60, 160, 10, 5, COLOR_CURSOR) # Near player
+    j end_render
+    cursor_dragon:
+    draw_rectangle(190, 160, 10, 5, COLOR_CURSOR) # Near dragon
 
-fim_render:
+end_render:
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra
 
 # ----------------------------------------------------------------
-# FUNÇÃO: DESENHAR SPRITE PRO (Unit Width 1 -> 256 colunas)
+# FUNCTION: DRAW SPRITE PRO (Unit Width 1 -> 256 columns)
 # ----------------------------------------------------------------
-desenhar_sprite_pro:
+draw_sprite_pro:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
 
-    lw $t3, 0($a2)       # Largura
-    lw $t4, 4($a2)       # Altura
-    addi $a2, $a2, 8     # Pula cabeçalho
+    lw $t3, 0($a2)       # Width
+    lw $t4, 4($a2)       # Height
+    addi $a2, $a2, 8     # Skip header
 
     move $t0, $a0        # X
     move $t1, $a1        # Y
-    move $t8, $t3        # Salva largura
+    move $t8, $t3        # Save width
 
 loop_pro_y:
-    blez $t4, fim_sprite_pro
-    move $t0, $a0        # Reseta X
-    move $t3, $t8        # Reseta contador largura
+    blez $t4, end_sprite_pro
+    move $t0, $a0        # Reset X
+    move $t3, $t8        # Reset width counter
 
     loop_pro_x:
-        blez $t3, prox_linha_pro
+        blez $t3, next_line_pro
         
-        lw $t5, 0($a2)   # Cor
+        lw $t5, 0($a2)   # Color
         addi $a2, $a2, 4
         
         beqz $t5, skip_pixel_pro
 
-        # --- CORREÇÃO FULL HD (Largura 256) ---
+        # --- FULL HD CORRECTION (Width 256) ---
         # Formula: Base + (y * 256 + x) * 4
-        # Dica: Multiplicar por 256 é igual a Shift Left 8 (2^8 = 256)
+        # Tip: Multiply by 256 equals Shift Left 8 (2^8 = 256)
         
         sll $t6, $t1, 8      # y * 256
         add $t6, $t6, $t0    # + x
@@ -327,20 +327,20 @@ loop_pro_y:
         addi $t3, $t3, -1
         j loop_pro_x
 
-prox_linha_pro:
+next_line_pro:
     addi $t1, $t1, 1
     addi $t4, $t4, -1
     j loop_pro_y
 
-fim_sprite_pro:
+end_sprite_pro:
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra
 
 # ----------------------------------------------------------------
-# FUNÇÃO: RETANGULO (Unit Width 1 -> 256 colunas)
+# FUNCTION: RECTANGLE (Unit Width 1 -> 256 columns)
 # ----------------------------------------------------------------
-func_desenhar_rect:
+func_draw_rect:
     move $t0, $a0
     move $t1, $a1
     move $t2, $a2
@@ -348,14 +348,14 @@ func_desenhar_rect:
     move $t4, $a3
 
     loop_y_rect:
-        blez $t3, fim_desenho_rect
+        blez $t3, end_draw_rect
         move $t0, $a0
         move $t2, $a2
         
         loop_x_rect:
-            blez $t2, proxima_linha_rect
+            blez $t2, next_line_rect
             
-            # --- CORREÇÃO FULL HD (Largura 256) ---
+            # --- FULL HD CORRECTION (Width 256) ---
             sll $t5, $t1, 8     # y * 256
             add $t5, $t5, $t0   # + x
             sll $t5, $t5, 2     # * 4
@@ -368,27 +368,27 @@ func_desenhar_rect:
             addi $t2, $t2, -1
             j loop_x_rect
             
-        proxima_linha_rect:
+        next_line_rect:
         addi $t1, $t1, 1
         addi $t3, $t3, -1
         j loop_y_rect
 
-    fim_desenho_rect:
+    end_draw_rect:
     jr $ra
 
 # ----------------------------------------------------------------
-# FUNÇÃO: MOSTRAR STATUS DA BATALHA
+# FUNCTION: SHOW BATTLE STATUS
 # ----------------------------------------------------------------
-mostrar_status:
+show_status:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
     
-    # Título
+    # Title
     li $v0, 4
     la $a0, msg_status
     syscall
     
-    # Status do Jogador
+    # Player Status
     li $v0, 4
     la $a0, msg_player_hp
     syscall
@@ -405,7 +405,7 @@ mostrar_status:
     la $a0, newline
     syscall
     
-    # Status do Dragão
+    # Dragon Status
     li $v0, 4
     la $a0, msg_monster_hp
     syscall
