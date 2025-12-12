@@ -49,6 +49,23 @@ player_sword_attack:
     la $a0, msg_player_sword
     syscall
     
+    # Calculate hit chance (80% base hit rate)
+    lw $t8, dragonFlying
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $v0
+    
+    # Check if dragon is flying (needs 50+ to hit)
+    beqz $t8, sword_normal_hit_check
+    blt $t0, 50, sword_missed
+    j sword_hit
+    
+    sword_normal_hit_check:
+    blt $t0, 20, sword_missed
+    
+    sword_hit:
     # Set dragon as stunned
     li $t0, 1
     sw $t0, dragonStunned
@@ -61,6 +78,15 @@ player_sword_attack:
     move $t1, $v0
     sw $t1, debtCounter
     
+    j sword_end
+    
+    sword_missed:
+    # Sword attack missed
+    li $v0, 4
+    la $a0, msg_miss
+    syscall
+    
+    sword_end:
     # Reset dragon flying status and player evasion
     sw $zero, dragonFlying
     sw $zero, playerEvasion
@@ -350,7 +376,7 @@ calculate_flank_damage:
     # Critical damage: 30 instead of 25
     move $t9, $a0  # Save flying status
     
-    li $v0, 42
+    li $v0, 42 # Random int
     li $a0, 0
     li $a1, 100
     syscall
