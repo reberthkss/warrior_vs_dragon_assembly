@@ -35,6 +35,9 @@
     quiz_q1_completed: .word 0        # 0 = Not completed, 1 = Completed
     quiz_q2_completed: .word 0        # 0 = Not completed, 1 = Completed
     quiz_q3_completed: .word 0        # 0 = Not completed, 1 = Completed
+    quiz_q4_completed: .word 0        # 0 = Not completed, 1 = Completed
+    quiz_q5_completed: .word 0        # 0 = Not completed, 1 = Completed
+    quiz_q6_completed: .word 0        # 0 = Not completed, 1 = Completed
     quizAllCompleted:  .word 0        # 0 = Questions available, 1 = All completed
     
     # Quiz Questions (3 questions)
@@ -58,6 +61,27 @@
     quiz_q3_opt3:   .asciiz "3) Barramento de Controle\n"
     quiz_q3_opt4:   .asciiz "4) Barramento de Enderecos\n"
     quiz_q3_answer: .word 4            # Correct answer is option 4
+    
+    quiz_q4:        .asciiz "\n[QUIZ] Qual e a menor unidade de informacao que um computador\ndigital pode entender e processar?\n"
+    quiz_q4_opt1:   .asciiz "1) Byte\n"
+    quiz_q4_opt2:   .asciiz "2) Hertz\n"
+    quiz_q4_opt3:   .asciiz "3) Pixel\n"
+    quiz_q4_opt4:   .asciiz "4) Bit\n"
+    quiz_q4_answer: .word 4            # Correct answer is option 4
+    
+    quiz_q5:        .asciiz "\n[QUIZ] Qual dos seguintes componentes e classificado exclusivamente\ncomo um dispositivo de Entrada (Input)?\n"
+    quiz_q5_opt1:   .asciiz "1) Impressora\n"
+    quiz_q5_opt2:   .asciiz "2) Monitor\n"
+    quiz_q5_opt3:   .asciiz "3) Teclado\n"
+    quiz_q5_opt4:   .asciiz "4) Caixas de Som\n"
+    quiz_q5_answer: .word 3            # Correct answer is option 3
+    
+    quiz_q6:        .asciiz "\n[QUIZ] Qual unidade de medida e comumente utilizada para expressar\na velocidade de clock (frequencia) de um processador moderno?\n"
+    quiz_q6_opt1:   .asciiz "1) DPI (Dots Per Inch)\n"
+    quiz_q6_opt2:   .asciiz "2) Gigawatts (GW)\n"
+    quiz_q6_opt3:   .asciiz "3) Gigabytes (GB)\n"
+    quiz_q6_opt4:   .asciiz "4) Gigahertz (GHz)\n"
+    quiz_q6_answer: .word 4            # Correct answer is option 4
 
     # --- MESSAGES ---
     msg_start:      .asciiz "\n--- FULL HD BATTLE (Unit 1) ---\n"
@@ -67,7 +91,7 @@
     msg_player_flank:.asciiz "\n[PLAYER] You used FLANK! "
     msg_player_lance:.asciiz "\n[PLAYER] You used LANCE! Your evasion is increased!\n"
     msg_player_quiz:.asciiz "\n--- AOC QUIZ TIME! ---\n"
-    msg_quiz_remaining:.asciiz "Questions remaining: "
+    msg_quiz_remaining:.asciiz "Questoes restantes: "
     msg_quiz_prompt:.asciiz "Your answer (1-4): "
     msg_quiz_correct:.asciiz "\n[CORRECT!] 5x compound interest applied!\n"
     msg_quiz_wrong: .asciiz "\n[WRONG!] -5 HP penalty!\n"

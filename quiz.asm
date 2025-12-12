@@ -41,10 +41,13 @@ player_quiz_attack:
     li $t1, -1
     beq $t0, $t1, quiz_all_completed
     
-    # Branch based on question index (0, 1, or 2)
+    # Branch based on question index (0, 1, 2, 3, 4, or 5)
     beq $t0, 0, show_quiz_1
     beq $t0, 1, show_quiz_2
     beq $t0, 2, show_quiz_3
+    beq $t0, 3, show_quiz_4
+    beq $t0, 4, show_quiz_5
+    beq $t0, 5, show_quiz_6
     j game_loop
 
 quiz_all_completed:
@@ -137,6 +140,84 @@ show_quiz_3:
     li $t3, 2  # Question index 2
     j check_quiz_answer
 
+show_quiz_4:
+    # Display question 4
+    li $v0, 4
+    la $a0, quiz_q4
+    syscall
+    la $a0, quiz_q4_opt1
+    syscall
+    la $a0, quiz_q4_opt2
+    syscall
+    la $a0, quiz_q4_opt3
+    syscall
+    la $a0, quiz_q4_opt4
+    syscall
+    
+    # Get answer
+    li $v0, 4
+    la $a0, msg_quiz_prompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t1, $v0  # Player's answer
+    
+    lw $t2, quiz_q4_answer
+    li $t3, 3  # Question index 3
+    j check_quiz_answer
+
+show_quiz_5:
+    # Display question 5
+    li $v0, 4
+    la $a0, quiz_q5
+    syscall
+    la $a0, quiz_q5_opt1
+    syscall
+    la $a0, quiz_q5_opt2
+    syscall
+    la $a0, quiz_q5_opt3
+    syscall
+    la $a0, quiz_q5_opt4
+    syscall
+    
+    # Get answer
+    li $v0, 4
+    la $a0, msg_quiz_prompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t1, $v0  # Player's answer
+    
+    lw $t2, quiz_q5_answer
+    li $t3, 4  # Question index 4
+    j check_quiz_answer
+
+show_quiz_6:
+    # Display question 6
+    li $v0, 4
+    la $a0, quiz_q6
+    syscall
+    la $a0, quiz_q6_opt1
+    syscall
+    la $a0, quiz_q6_opt2
+    syscall
+    la $a0, quiz_q6_opt3
+    syscall
+    la $a0, quiz_q6_opt4
+    syscall
+    
+    # Get answer
+    li $v0, 4
+    la $a0, msg_quiz_prompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t1, $v0  # Player's answer
+    
+    lw $t2, quiz_q6_answer
+    li $t3, 5  # Question index 5
+    j check_quiz_answer
+
 check_quiz_answer:
     # $t1 = player's answer, $t2 = correct answer, $t3 = question index (0, 1, or 2)
     move $s7, $t3  # Save question index
@@ -151,6 +232,9 @@ check_quiz_answer:
     beq $s7, 0, mark_q1_complete
     beq $s7, 1, mark_q2_complete
     beq $s7, 2, mark_q3_complete
+    beq $s7, 3, mark_q4_complete
+    beq $s7, 4, mark_q5_complete
+    beq $s7, 5, mark_q6_complete
     
 mark_q1_complete:
     li $t0, 1
@@ -165,6 +249,21 @@ mark_q2_complete:
 mark_q3_complete:
     li $t0, 1
     sw $t0, quiz_q3_completed
+    j apply_correct_bonus
+    
+mark_q4_complete:
+    li $t0, 1
+    sw $t0, quiz_q4_completed
+    j apply_correct_bonus
+    
+mark_q5_complete:
+    li $t0, 1
+    sw $t0, quiz_q5_completed
+    j apply_correct_bonus
+    
+mark_q6_complete:
+    li $t0, 1
+    sw $t0, quiz_q6_completed
     j apply_correct_bonus
 
 apply_correct_bonus:
@@ -219,43 +318,97 @@ quiz_finish:
 # QUIZ HELPER FUNCTIONS
 # ----------------------------------------------------------------
 find_next_quiz:
-    # Find the next unanswered question
-    # Returns question index in $v0 (0-2) or -1 if all completed
-    addi $sp, $sp, -4
+    # Find a random unanswered question
+    # Returns question index in $v0 (0-5) or -1 if all completed
+    addi $sp, $sp, -20
     sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    sw $s2, 12($sp)
+    sw $s3, 16($sp)
+    
+    # Build array of available questions
+    # Use $s0 as array pointer, $s1 as counter
+    addi $s0, $sp, -24  # Array location on stack
+    li $s1, 0           # Counter of available questions
     
     # Check question 1
     lw $t0, quiz_q1_completed
-    beqz $t0, return_q1
+    bnez $t0, check_random_q2
+    sw $zero, 0($s0)
+    addi $s0, $s0, 4
+    addi $s1, $s1, 1
     
-    # Check question 2
+    check_random_q2:
     lw $t0, quiz_q2_completed
-    beqz $t0, return_q2
+    bnez $t0, check_random_q3
+    li $t1, 1
+    sw $t1, 0($s0)
+    addi $s0, $s0, 4
+    addi $s1, $s1, 1
     
-    # Check question 3
+    check_random_q3:
     lw $t0, quiz_q3_completed
-    beqz $t0, return_q3
+    bnez $t0, check_random_q4
+    li $t1, 2
+    sw $t1, 0($s0)
+    addi $s0, $s0, 4
+    addi $s1, $s1, 1
     
-    # All completed
+    check_random_q4:
+    lw $t0, quiz_q4_completed
+    bnez $t0, check_random_q5
+    li $t1, 3
+    sw $t1, 0($s0)
+    addi $s0, $s0, 4
+    addi $s1, $s1, 1
+    
+    check_random_q5:
+    lw $t0, quiz_q5_completed
+    bnez $t0, check_random_q6
+    li $t1, 4
+    sw $t1, 0($s0)
+    addi $s0, $s0, 4
+    addi $s1, $s1, 1
+    
+    check_random_q6:
+    lw $t0, quiz_q6_completed
+    bnez $t0, check_all_done
+    li $t1, 5
+    sw $t1, 0($s0)
+    addi $s0, $s0, 4
+    addi $s1, $s1, 1
+    
+    check_all_done:
+    beqz $s1, all_quiz_done
+    
+    # Generate random index from available questions
+    li $v0, 42
+    li $a0, 0
+    move $a1, $s1
+    syscall
+    move $s2, $a0  # Random index
+    
+    # Get question number from array
+    addi $s3, $sp, -24
+    sll $t0, $s2, 2
+    add $s3, $s3, $t0
+    lw $v0, 0($s3)
+    
+    j find_next_quiz_end
+    
+all_quiz_done:
     li $t0, 1
     sw $t0, quizAllCompleted
     li $v0, -1
-    j find_next_quiz_end
-    
-return_q1:
-    li $v0, 0
-    j find_next_quiz_end
-    
-return_q2:
-    li $v0, 1
-    j find_next_quiz_end
-    
-return_q3:
-    li $v0, 2
     
 find_next_quiz_end:
+    lw $s3, 16($sp)
+    lw $s2, 12($sp)
+    lw $s1, 8($sp)
+    lw $s0, 4($sp)
     lw $ra, 0($sp)
-    addi $sp, $sp, 4
+    addi $sp, $sp, 20
     jr $ra
 
 count_remaining_questions:
@@ -285,8 +438,32 @@ count_remaining_questions:
     check_q3:
     lw $t0, quiz_q3_completed
     beqz $t0, count_q3
-    j count_done
+    j check_q4
     count_q3:
+    addi $v0, $v0, 1
+    
+    # Check question 4
+    check_q4:
+    lw $t0, quiz_q4_completed
+    beqz $t0, count_q4
+    j check_q5
+    count_q4:
+    addi $v0, $v0, 1
+    
+    # Check question 5
+    check_q5:
+    lw $t0, quiz_q5_completed
+    beqz $t0, count_q5
+    j check_q6
+    count_q5:
+    addi $v0, $v0, 1
+    
+    # Check question 6
+    check_q6:
+    lw $t0, quiz_q6_completed
+    beqz $t0, count_q6
+    j count_done
+    count_q6:
     addi $v0, $v0, 1
     
     count_done:
