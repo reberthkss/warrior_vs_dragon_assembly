@@ -33,7 +33,7 @@ render_all:
     la $a2, sprite_dragon
     jal draw_sprite_pro
 
-    # 4. Health Bars (Increased for new resolution)
+    # 4. Health Bars
     # Player Bar (100 HP max = 50 pixels max)
     lw $t0, playerHP
     blez $t0, skip_hp_player
@@ -47,7 +47,7 @@ render_all:
     jal func_draw_rect
     skip_hp_player:
 
-    # Dragon Bar (1000 HP max = 50 pixels max)
+    # Dragon Bar
     lw $t0, monsterHP
     blez $t0, skip_hp_monster
     div $t0, $t0, 20    # Scale (1000 HP = 50 pixels)
@@ -146,7 +146,6 @@ func_draw_rect:
         loop_x_rect:
             blez $t2, next_line_rect
             
-            # --- FULL HD CORRECTION (Width 256) ---
             sll $t5, $t1, 8     # y * 256
             add $t5, $t5, $t0   # + x
             sll $t5, $t5, 2     # * 4

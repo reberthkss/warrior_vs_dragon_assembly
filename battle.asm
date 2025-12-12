@@ -39,7 +39,7 @@ player_normal_attack:
     sw $t0, turn
     
     li $v0, 32
-    li $a0, 500
+    li $a0, 500 # wait 500ms
     syscall
     j game_loop
 

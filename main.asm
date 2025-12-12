@@ -1,8 +1,6 @@
 # ============================================
 # MAIN.ASM - Warrior vs Dragon Battle Game
 # ============================================
-# Main game loop and entry point
-# Modular structure with includes for organization
 
 # --- INCLUDE DATA & SPRITES ---
 .include "data.asm"
@@ -19,7 +17,7 @@
 .end_macro
 
 # ----------------------------------------------------------------
-# MAIN ENTRY POINT
+# MAIN
 # ----------------------------------------------------------------
 .text
 .globl main
@@ -53,7 +51,7 @@ game_loop:
     # 2. Show Battle Status
     jal show_status
 
-    # 3. Render (Now in Full Res)
+    # 3. Render
     jal render_all
 
     # 4. Turn Logic
@@ -63,7 +61,7 @@ game_loop:
     j game_loop
 
 # ----------------------------------------------------------------
-# PLAYER TURN HANDLER
+# PLAYER TURN
 # ----------------------------------------------------------------
 player_turn:
     # Check if player is stunned
@@ -81,7 +79,8 @@ player_turn:
     # Change to monster turn
     li $t0, 1
     sw $t0, turn
-    
+
+    # wait 1 sec
     li $v0, 32
     li $a0, 1000
     syscall
@@ -112,7 +111,7 @@ player_can_act:
     j player_can_act  # Invalid input, ask again
 
 # ----------------------------------------------------------------
-# GAME OVER HANDLERS
+# GAME OVER
 # ----------------------------------------------------------------
 game_over_win:
     li $v0, 4
