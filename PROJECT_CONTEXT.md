@@ -68,11 +68,19 @@ The player can choose from 5 different actions each turn:
    - Applies compound interest on hit
    - Special: If dragon is flying, hit chance reduced to 50%
 
-5. **Quiz Ability (AOC Quiz - Placeholder)**
-   - No direct HP damage
-   - Applies compound interest directly to debt counter
-   - Shows updated debt counter value
-   - Resets player evasion and dragon flying status
+5. **Quiz Ability (Computer Architecture Quiz)**
+   - **3 Educational Questions** in Portuguese about computer architecture
+   - Questions rotate and can only be answered correctly once each
+   - Displays remaining questions counter
+   - **Correct Answer**: 5x compound interest applied (massive boost!)
+   - **Wrong Answer**: -5 HP penalty + 1x compound interest
+   - **Completion Tracking**: Each question marked as completed when answered correctly
+   - **Quiz Questions**:
+     1. Which CPU component performs mathematical and logical operations? (Answer: ULA/ALU)
+     2. Which memory type is volatile and loses data when powered off? (Answer: RAM)
+     3. In Von Neumann model, which bus transports memory addresses? (Answer: Address Bus)
+   - Shows "Questions remaining: X" before each quiz
+   - After all 3 correct answers, quiz becomes unavailable
 
 #### Dragon Attacks
 The dragon randomly chooses one of three attacks (33% each):
@@ -88,7 +96,7 @@ The dragon randomly chooses one of three attacks (33% each):
 2. **Stomp**
    - Stuns the player
    - Player loses next turn
-   - No damage or debt effect
+   - Reduces debt counter by 5%
    - Stun resets after skipped turn
 
 3. **Fly**
@@ -187,12 +195,17 @@ warrior_vs_dragon_assembly/
 - `player_sword_attack`: Stuns dragon, applies compound interest
 - `player_flank_attack`: High critical chance attack
 - `player_lance_attack`: Defensive attack with evasion buff
-- `player_quiz_attack`: AOC Quiz placeholder, applies compound interest
+- `player_quiz_attack`: Educational quiz with 3 questions, completion tracking
 - `monster_turn`: Checks dragon stun, then dragon AI attack selection
 - `calculate_attack_damage`: Player normal attack with evasion check
 - `calculate_flank_damage`: Flank attack damage calculation
 - `calculate_lance_damage`: Lance attack damage calculation
 - `calculate_dragon_damage`: Dragon fire breath with player evasion check
+
+### Quiz System
+- `find_next_quiz`: Finds next unanswered question, returns -1 if all completed
+- `count_remaining_questions`: Counts how many questions are still available
+- `check_quiz_answer`: Validates answer and marks question as completed on success
 
 ### Compound Interest System
 - `apply_compound_interest`: Applies 10% interest + 100 base to debt counter
