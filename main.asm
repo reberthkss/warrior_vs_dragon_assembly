@@ -679,7 +679,8 @@ dragon_stomp:
     li $t0, 1
     sw $t0, playerStunned
     
-    # No HP damage, no debt for stomp
+    # Apply Dragon Debt Payment (stomp also reduces debt by 5%)
+    jal apply_dragon_payment
     
     li $t0, 0
     sw $t0, turn
