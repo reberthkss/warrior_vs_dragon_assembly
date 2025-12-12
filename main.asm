@@ -26,6 +26,35 @@
     # Compound Interest Rates
     interestRate:   .word 10          # 10% interest rate
     baseDamage:     .word 100         # Base damage to add to interest
+    
+    # Quiz System
+    quizQuestionIndex: .word 0        # Current question index (0-2)
+    quiz_q1_completed: .word 0        # 0 = Not completed, 1 = Completed
+    quiz_q2_completed: .word 0        # 0 = Not completed, 1 = Completed
+    quiz_q3_completed: .word 0        # 0 = Not completed, 1 = Completed
+    quizAllCompleted:  .word 0        # 0 = Questions available, 1 = All completed
+    
+    # Quiz Questions (3 questions)
+    quiz_q1:        .asciiz "\n[QUIZ] Qual componente da CPU e responsavel por realizar operacoes\nmatematicas (como adicao e subtracao) e logicas (como AND e OR)?\n"
+    quiz_q1_opt1:   .asciiz "1) Unidade de Controle (UC)\n"
+    quiz_q1_opt2:   .asciiz "2) Unidade Logica e Aritmetica (ULA/ALU)\n"
+    quiz_q1_opt3:   .asciiz "3) Registradores\n"
+    quiz_q1_opt4:   .asciiz "4) Memoria Cache\n"
+    quiz_q1_answer: .word 2            # Correct answer is option 2
+    
+    quiz_q2:        .asciiz "\n[QUIZ] Qual tipo de memoria e conhecido por ser volatil, ou seja,\nperde todos os dados armazenados quando o computador e desligado?\n"
+    quiz_q2_opt1:   .asciiz "1) Memoria ROM\n"
+    quiz_q2_opt2:   .asciiz "2) Memoria RAM\n"
+    quiz_q2_opt3:   .asciiz "3) Pen Drive\n"
+    quiz_q2_opt4:   .asciiz "4) Disco Rigido (HD)\n"
+    quiz_q2_answer: .word 2            # Correct answer is option 2
+    
+    quiz_q3:        .asciiz "\n[QUIZ] No modelo de Von Neumann, qual barramento e responsavel por\ntransportar o endereco de memoria onde a CPU deseja ler ou escrever um dado?\n"
+    quiz_q3_opt1:   .asciiz "1) Barramento de Entrada/Saida\n"
+    quiz_q3_opt2:   .asciiz "2) Barramento de Dados\n"
+    quiz_q3_opt3:   .asciiz "3) Barramento de Controle\n"
+    quiz_q3_opt4:   .asciiz "4) Barramento de Enderecos\n"
+    quiz_q3_answer: .word 4            # Correct answer is option 4
 
     # --- MESSAGES ---
     msg_start:      .asciiz "\n--- FULL HD BATTLE (Unit 1) ---\n"
@@ -34,7 +63,12 @@
     msg_player_sword:.asciiz "\n[PLAYER] You used SWORD! The dragon is STUNNED!\n"
     msg_player_flank:.asciiz "\n[PLAYER] You used FLANK! "
     msg_player_lance:.asciiz "\n[PLAYER] You used LANCE! Your evasion is increased!\n"
-    msg_player_quiz:.asciiz "\n[PLAYER] You answered the AOC Quiz correctly! Applying compound interest!\n"
+    msg_player_quiz:.asciiz "\n--- AOC QUIZ TIME! ---\n"
+    msg_quiz_remaining:.asciiz "Questions remaining: "
+    msg_quiz_prompt:.asciiz "Your answer (1-4): "
+    msg_quiz_correct:.asciiz "\n[CORRECT!] 5x compound interest applied!\n"
+    msg_quiz_wrong: .asciiz "\n[WRONG!] -5 HP penalty!\n"
+    msg_quiz_all_done:.asciiz "\n[QUIZ] All questions have been answered correctly! Quiz no longer available.\n"
     msg_debt_update:.asciiz "Debt Counter updated: "
     msg_monster_atk:.asciiz "\n[DRAGON] The monster breathed fire! "
     msg_stomp:      .asciiz "\n[DRAGON] The dragon stomped! You are STUNNED!\n"
@@ -288,15 +322,188 @@ player_lance_attack:
     j game_loop
 
 player_quiz_attack:
-    # Quiz ability - applies compound interest directly (no damage)
-    # This is a placeholder until the real AOC quiz is implemented
+    # Quiz ability - player must answer a question correctly
+    # Check if all quizzes are completed
+    lw $t0, quizAllCompleted
+    bnez $t0, quiz_all_completed
+    
     li $v0, 4
     la $a0, msg_player_quiz
     syscall
     
-    # Apply compound interest to debt counter
-    jal apply_compound_interest
+    # Count and display remaining questions
+    jal count_remaining_questions
+    move $t9, $v0  # Save count
     
+    li $v0, 4
+    la $a0, msg_quiz_remaining
+    syscall
+    li $v0, 1
+    move $a0, $t9
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
+    # Find next available question (not yet completed)
+    jal find_next_quiz
+    move $t0, $v0  # $v0 contains question index (0-2) or -1 if all done
+    
+    # Check if all questions completed
+    li $t1, -1
+    beq $t0, $t1, quiz_all_completed
+    
+    # Branch based on question index (0, 1, or 2)
+    beq $t0, 0, show_quiz_1
+    beq $t0, 1, show_quiz_2
+    beq $t0, 2, show_quiz_3
+    j game_loop
+
+quiz_all_completed:
+    # All questions answered correctly
+    li $v0, 4
+    la $a0, msg_quiz_all_done
+    syscall
+    
+    # Don't consume turn, let player choose another action
+    li $v0, 32
+    li $a0, 1000
+    syscall
+    j player_can_act
+
+show_quiz_1:
+    # Display question 1
+    li $v0, 4
+    la $a0, quiz_q1
+    syscall
+    la $a0, quiz_q1_opt1
+    syscall
+    la $a0, quiz_q1_opt2
+    syscall
+    la $a0, quiz_q1_opt3
+    syscall
+    la $a0, quiz_q1_opt4
+    syscall
+    
+    # Get answer
+    li $v0, 4
+    la $a0, msg_quiz_prompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t1, $v0  # Player's answer
+    
+    lw $t2, quiz_q1_answer
+    li $t3, 0  # Question index 0
+    j check_quiz_answer
+
+show_quiz_2:
+    # Display question 2
+    li $v0, 4
+    la $a0, quiz_q2
+    syscall
+    la $a0, quiz_q2_opt1
+    syscall
+    la $a0, quiz_q2_opt2
+    syscall
+    la $a0, quiz_q2_opt3
+    syscall
+    la $a0, quiz_q2_opt4
+    syscall
+    
+    # Get answer
+    li $v0, 4
+    la $a0, msg_quiz_prompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t1, $v0  # Player's answer
+    
+    lw $t2, quiz_q2_answer
+    li $t3, 1  # Question index 1
+    j check_quiz_answer
+
+show_quiz_3:
+    # Display question 3
+    li $v0, 4
+    la $a0, quiz_q3
+    syscall
+    la $a0, quiz_q3_opt1
+    syscall
+    la $a0, quiz_q3_opt2
+    syscall
+    la $a0, quiz_q3_opt3
+    syscall
+    la $a0, quiz_q3_opt4
+    syscall
+    
+    # Get answer
+    li $v0, 4
+    la $a0, msg_quiz_prompt
+    syscall
+    li $v0, 5
+    syscall
+    move $t1, $v0  # Player's answer
+    
+    lw $t2, quiz_q3_answer
+    li $t3, 2  # Question index 2
+    j check_quiz_answer
+
+check_quiz_answer:
+    # $t1 = player's answer, $t2 = correct answer, $t3 = question index (0, 1, or 2)
+    move $s7, $t3  # Save question index
+    bne $t1, $t2, quiz_wrong
+    
+    # Correct answer - apply compound interest 5 TIMES (5x multiplier)
+    li $v0, 4
+    la $a0, msg_quiz_correct
+    syscall
+    
+    # Mark this question as completed
+    beq $s7, 0, mark_q1_complete
+    beq $s7, 1, mark_q2_complete
+    beq $s7, 2, mark_q3_complete
+    
+mark_q1_complete:
+    li $t0, 1
+    sw $t0, quiz_q1_completed
+    j apply_correct_bonus
+    
+mark_q2_complete:
+    li $t0, 1
+    sw $t0, quiz_q2_completed
+    j apply_correct_bonus
+    
+mark_q3_complete:
+    li $t0, 1
+    sw $t0, quiz_q3_completed
+    j apply_correct_bonus
+
+apply_correct_bonus:
+    # Apply compound interest 5 times for massive debt growth
+    jal apply_compound_interest
+    jal apply_compound_interest
+    jal apply_compound_interest
+    jal apply_compound_interest
+    jal apply_compound_interest
+    j quiz_finish
+
+quiz_wrong:
+    # Wrong answer - apply only single compound interest and lose 5 HP
+    li $v0, 4
+    la $a0, msg_quiz_wrong
+    syscall
+    
+    # Reduce player HP by 5 as penalty
+    lw $t0, playerHP
+    addi $t0, $t0, -5
+    sw $t0, playerHP
+    
+    # Apply compound interest once
+    jal apply_compound_interest
+    j quiz_finish
+
+quiz_finish:
     # Display updated debt counter
     li $v0, 4
     la $a0, msg_debt_update
@@ -319,6 +526,82 @@ player_quiz_attack:
     li $a0, 500
     syscall
     j game_loop
+
+find_next_quiz:
+    # Find the next unanswered question
+    # Returns question index in $v0 (0-2) or -1 if all completed
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    # Check question 1
+    lw $t0, quiz_q1_completed
+    beqz $t0, return_q1
+    
+    # Check question 2
+    lw $t0, quiz_q2_completed
+    beqz $t0, return_q2
+    
+    # Check question 3
+    lw $t0, quiz_q3_completed
+    beqz $t0, return_q3
+    
+    # All completed
+    li $t0, 1
+    sw $t0, quizAllCompleted
+    li $v0, -1
+    j find_next_quiz_end
+    
+return_q1:
+    li $v0, 0
+    j find_next_quiz_end
+    
+return_q2:
+    li $v0, 1
+    j find_next_quiz_end
+    
+return_q3:
+    li $v0, 2
+    
+find_next_quiz_end:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+count_remaining_questions:
+    # Count how many questions are not yet completed
+    # Returns count in $v0
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    li $v0, 0  # Counter
+    
+    # Check question 1
+    lw $t0, quiz_q1_completed
+    beqz $t0, count_q1
+    j check_q2
+    count_q1:
+    addi $v0, $v0, 1
+    
+    # Check question 2
+    check_q2:
+    lw $t0, quiz_q2_completed
+    beqz $t0, count_q2
+    j check_q3
+    count_q2:
+    addi $v0, $v0, 1
+    
+    # Check question 3
+    check_q3:
+    lw $t0, quiz_q3_completed
+    beqz $t0, count_q3
+    j count_done
+    count_q3:
+    addi $v0, $v0, 1
+    
+    count_done:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
 
 monster_turn:
     li $v0, 32
