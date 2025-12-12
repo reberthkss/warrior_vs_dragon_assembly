@@ -3,6 +3,51 @@
 ## Project Overview
 A turn-based battle game written in MIPS Assembly featuring a warrior fighting against a dragon. The game includes graphical rendering on a 256x256 display and implements a unique **Compound Interest Debt** mechanic alongside traditional HP-based combat.
 
+## Project Structure (Modular Architecture)
+
+The project has been refactored into a modular structure for better organization and maintainability:
+
+### File Organization
+- **main.asm** - Main game loop, entry point, and turn handler (124 lines)
+- **data.asm** - Game variables, constants, and text messages (99 lines)
+- **battle.asm** - Player/dragon attack functions and damage calculations (452 lines)
+- **quiz.asm** - Quiz system with question handling and validation (284 lines)
+- **rendering.asm** - Graphics rendering engine, sprites, and HP bars (213 lines)
+- **sprites.asm** - Sprite data for player and dragon (unchanged)
+- **sprites/converter_sprites.py** - Python utility to convert images to MIPS sprites
+
+### Module Responsibilities
+
+**main.asm**: Core game flow
+- Entry point and initialization
+- Main game loop with victory/defeat checks
+- Player turn handler and action menu
+- Game over handlers
+
+**data.asm**: Data definitions
+- Display configuration and color constants
+- Game state variables (HP, debt, turn, status effects)
+- Quiz questions and answers (3 questions in Portuguese)
+- All game messages and UI text
+
+**battle.asm**: Combat mechanics
+- Player attacks: Normal, Sword, Flank, Lance
+- Dragon attacks: Fire Breath, Stomp, Fly
+- Damage calculation functions
+- Compound interest system (apply, payment)
+
+**quiz.asm**: Educational quiz feature
+- Quiz ability implementation
+- Question selection and display
+- Answer validation
+- Completion tracking (per-question flags)
+
+**rendering.asm**: Visual presentation
+- Screen rendering (sky, ground, sprites)
+- HP bar drawing with scaling
+- Turn cursor indicator
+- Battle status display
+
 ## Technical Specifications
 
 ### Display Configuration
@@ -176,50 +221,51 @@ Dragon - HP: [value]
 [PLAYER] Choose action: (1) Attack, (2) Sword, (3) Flank, (4) Lance, (5) Quiz - 
 ```
 
-## File Structure
-```
-warrior_vs_dragon_assembly/
-├── main.asm           # Main game logic and rendering
-├── sprites.asm        # Sprite data for warrior and dragon
-├── sprites/
-│   └── converter_sprites.py  # Sprite conversion utility
-└── PROJECT_CONTEXT.md # This file
-```
+## Key Functions by Module
 
-## Key Functions
-
-### Battle Logic
+### Main Game Loop (main.asm)
+- `main`: Entry point, displays welcome messages
 - `game_loop`: Main game loop with HP and debt victory checks
 - `player_turn`: Checks stun status then shows action menu
+- `player_can_act`: Displays action menu and handles player input
+- `game_over_win`: Victory by dragon defeat
+- `game_over_lose`: Defeat by player death
+- `game_over_win_debt`: Victory by reaching 10,000 debt
+- `exit`: Program termination
+
+### Battle System (battle.asm)
 - `player_normal_attack`: Standard attack with compound interest
 - `player_sword_attack`: Stuns dragon, applies compound interest
 - `player_flank_attack`: High critical chance attack
 - `player_lance_attack`: Defensive attack with evasion buff
-- `player_quiz_attack`: Educational quiz with 3 questions, completion tracking
 - `monster_turn`: Checks dragon stun, then dragon AI attack selection
+- `dragon_can_act`: Dragon attack AI (Fire Breath, Stomp, or Fly)
+- `dragon_stomp`: Stuns player and reduces debt by 5%
+- `dragon_fly`: Increases dragon evasion for next turn
 - `calculate_attack_damage`: Player normal attack with evasion check
 - `calculate_flank_damage`: Flank attack damage calculation
 - `calculate_lance_damage`: Lance attack damage calculation
 - `calculate_dragon_damage`: Dragon fire breath with player evasion check
-
-### Quiz System
-- `find_next_quiz`: Finds next unanswered question, returns -1 if all completed
-- `count_remaining_questions`: Counts how many questions are still available
-- `check_quiz_answer`: Validates answer and marks question as completed on success
-
-### Compound Interest System
 - `apply_compound_interest`: Applies 10% interest + 100 base to debt counter
 - `apply_compound_interest_direct`: Custom interest calculation with parameters
-- `apply_dragon_payment`: Reduces debt by 5% when dragon hits
+- `apply_dragon_payment`: Reduces debt by 5% when dragon hits or stomps
 
-### Graphics Engine
-- `render_all`: Main rendering function
-- `draw_sprite_pro`: Renders sprites with transparency
+### Quiz System (quiz.asm)
+- `player_quiz_attack`: Educational quiz with 3 questions, completion tracking
+- `quiz_all_completed`: Handler when all questions answered
+- `show_quiz_1`, `show_quiz_2`, `show_quiz_3`: Display individual quiz questions
+- `check_quiz_answer`: Validates answer and marks question as completed on success
+- `apply_correct_bonus`: Applies 5x compound interest for correct answer
+- `quiz_wrong`: Applies -5 HP penalty and 1x compound interest
+- `quiz_finish`: Updates debt display and switches turn
+- `find_next_quiz`: Finds next unanswered question, returns -1 if all completed
+- `count_remaining_questions`: Counts how many questions are still available
+
+### Graphics Engine (rendering.asm)
+- `render_all`: Main rendering function (sky, ground, sprites, HP bars, cursor)
+- `draw_sprite_pro`: Renders sprites with transparency support
 - `func_draw_rect`: Draws filled rectangles
-- `draw_rectangle`: Macro for rectangle rendering
-
-### Status Management
-- `show_status`: Displays HP and debt in terminal
+- `show_status`: Displays HP and debt counter in terminal
 
 ## Game Variables
 ```assembly
