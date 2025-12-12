@@ -27,7 +27,7 @@ The project has been refactored into a modular structure for better organization
 **data.asm**: Data definitions
 - Display configuration and color constants
 - Game state variables (HP, debt, turn, status effects)
-- Quiz questions and answers (3 questions in Portuguese)
+- Quiz questions and answers (6 questions in Portuguese)
 - All game messages and UI text
 
 **battle.asm**: Combat mechanics
@@ -37,8 +37,8 @@ The project has been refactored into a modular structure for better organization
 - Compound interest system (apply, payment)
 
 **quiz.asm**: Educational quiz feature
-- Quiz ability implementation
-- Question selection and display
+- Quiz ability implementation with 6 questions
+- Random question selection from unanswered pool
 - Answer validation
 - Completion tracking (per-question flags)
 
@@ -114,8 +114,9 @@ The player can choose from 5 different actions each turn:
    - Special: If dragon is flying, hit chance reduced to 50%
 
 5. **Quiz Ability (Computer Architecture Quiz)**
-   - **3 Educational Questions** in Portuguese about computer architecture
-   - Questions rotate and can only be answered correctly once each
+   - **6 Educational Questions** in Portuguese about computer architecture and hardware
+   - **Random Selection**: Questions are randomly selected from unanswered pool
+   - Questions can only be answered correctly once each
    - Displays remaining questions counter
    - **Correct Answer**: 5x compound interest applied (massive boost!)
    - **Wrong Answer**: -5 HP penalty + 1x compound interest
@@ -124,8 +125,11 @@ The player can choose from 5 different actions each turn:
      1. Which CPU component performs mathematical and logical operations? (Answer: ULA/ALU)
      2. Which memory type is volatile and loses data when powered off? (Answer: RAM)
      3. In Von Neumann model, which bus transports memory addresses? (Answer: Address Bus)
-   - Shows "Questions remaining: X" before each quiz
-   - After all 3 correct answers, quiz becomes unavailable
+     4. What is the smallest unit of information a computer can process? (Answer: Bit)
+     5. Which component is exclusively an input device? (Answer: Teclado/Keyboard)
+     6. What unit measures processor clock speed frequency? (Answer: Gigahertz/GHz)
+   - Shows "Questoes restantes: X" before each quiz
+   - After all 6 correct answers, quiz becomes unavailable
 
 #### Dragon Attacks
 The dragon randomly chooses one of three attacks (33% each):
@@ -251,14 +255,14 @@ Dragon - HP: [value]
 - `apply_dragon_payment`: Reduces debt by 5% when dragon hits or stomps
 
 ### Quiz System (quiz.asm)
-- `player_quiz_attack`: Educational quiz with 3 questions, completion tracking
+- `player_quiz_attack`: Educational quiz with 6 questions, completion tracking
 - `quiz_all_completed`: Handler when all questions answered
-- `show_quiz_1`, `show_quiz_2`, `show_quiz_3`: Display individual quiz questions
+- `show_quiz_1`, `show_quiz_2`, `show_quiz_3`, `show_quiz_4`, `show_quiz_5`, `show_quiz_6`: Display individual quiz questions
 - `check_quiz_answer`: Validates answer and marks question as completed on success
 - `apply_correct_bonus`: Applies 5x compound interest for correct answer
 - `quiz_wrong`: Applies -5 HP penalty and 1x compound interest
 - `quiz_finish`: Updates debt display and switches turn
-- `find_next_quiz`: Finds next unanswered question, returns -1 if all completed
+- `find_next_quiz`: Randomly selects an unanswered question from available pool
 - `count_remaining_questions`: Counts how many questions are still available
 
 ### Graphics Engine (rendering.asm)
@@ -290,7 +294,11 @@ baseDamage:     100    # Base amount added per compound interest
 4. **Sword Ability**: No HP damage but guarantees compound interest and stuns dragon
 5. **Flank Ability**: High-risk high-reward with 40% critical chance and increased damage
 6. **Lance Ability**: Defensive option with reduced damage but grants evasion buff
-7. **Quiz Ability**: Placeholder for future AOC quiz integration, applies compound interest directly
+7. **Quiz Ability**: 6 educational questions about computer architecture and hardware
+   - Random selection from unanswered questions
+   - 5x compound interest on correct answers
+   - -5 HP penalty on wrong answers
+   - Each question can only be answered correctly once
 8. **Dragon Balance**: Low hit rate (30%) compensated by very high damage (20-35)
 9. **Evasion Mechanics**: Both player (Lance) and dragon (Fly) can activate evasion buffs
 10. **Stun Mechanics**: Both combatants can be stunned, causing them to skip their turn entirely
