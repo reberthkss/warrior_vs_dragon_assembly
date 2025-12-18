@@ -5,6 +5,8 @@
 # damage calculations, and compound interest mechanics.
 
 .text
+    # Ensure main is the entry point (prevents battle.asm from being executed first)
+    j main
 
 # ----------------------------------------------------------------
 # PLAYER ATTACKS
@@ -49,24 +51,28 @@ player_sword_attack:
     la $a0, msg_player_sword
     syscall
     
-    # Calculate hit chance (80% base hit rate)
+    # Calculate hit chance (40% base hit rate)
     lw $t8, dragonFlying
     li $v0, 42
     li $a0, 0
     li $a1, 100
     syscall
     move $t0, $v0
-    
-    # Check if dragon is flying (needs 50+ to hit)
+    # Check if dragon is not flying (normal hit chance)
     beqz $t8, sword_normal_hit_check
-    blt $t0, 50, sword_missed
+    # Check if dragon is flying (needs 30+ to hit)
+    blt $t0, 80, sword_missed
     j sword_hit
     
     sword_normal_hit_check:
-    blt $t0, 20, sword_missed
+    blt $t0, 60, sword_missed
     
     sword_hit:
     # Set dragon as stunned
+    li $v0, 4
+    la $a0, msg_player_sword_success
+    syscall 
+    
     li $t0, 1
     sw $t0, dragonStunned
     
