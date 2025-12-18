@@ -4,8 +4,9 @@ from PIL import Image
 # --- CONFIGURAÇÃO DE TAMANHOS ---
 # Lista de ativos: (Nome do Arquivo, Nome do Label, Largura Desejada)
 ASSETS = [
-    ("dragon.png", "sprite_player", 48),   # Guerreiro: Pequeno (48px)
-    ("warrior.png",    "sprite_dragon", 110)   # Dragão: GIGANTE (110px)
+    # ("warrior.png", "sprite_player", 48),   # Guerreiro: Pequeno (48px)
+    ("warrior_defeated.png", "sprite_player_defeated", 48),   # Guerreiro: Pequeno (48px)
+    # ("dragon.png",    "sprite_dragon", 110)   # Dragão: GIGANTE (110px)
 ]
 # --------------------------------
 

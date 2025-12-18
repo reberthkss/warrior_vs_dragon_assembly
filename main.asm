@@ -114,6 +114,9 @@ game_over_win:
     j exit
 
 game_over_lose:
+    # Final render to show defeated state
+    jal render_all
+    
     li $v0, 4
     la $a0, msg_lose
     syscall
