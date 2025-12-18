@@ -26,6 +26,13 @@
     dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
     playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Lance ability)
     
+    # Consumable Items - Estus Flask (Dark Souls Reference)
+    estusFlaskCount: .word 2          # Number of Estus Flasks available (limited resource)
+    estusFlaskHeal:  .word 25         # HP restored per flask (balanced with dragon damage)
+    estusFlaskRounds:.word 2          # Number of rounds flask effect lasts (risk/reward)
+    estusFlaskActive:.word 0          # 0 = Inactive, 1 = Active flask effect
+    estusFlaskCounter:.word 0         # Counts down remaining rounds
+    
     # Compound Interest Rates
     interestRate:   .word 10          # 10% interest rate
     baseDamage:     .word 100         # Base damage to add to interest
@@ -100,12 +107,13 @@
     msg_monster_atk:.asciiz "\n[DRAGON] The monster breathed fire! "
     msg_stomp:      .asciiz "\n[DRAGON] The dragon stomped! You are STUNNED!\n"
     msg_fly:        .asciiz "\n[DRAGON] The dragon takes flight! Evasion increased!\n"
+    msg_inferno:    .asciiz "\n[DRAGON] The dragon unleashes INFERNO! Devastating attack!\n"
     msg_stunned:    .asciiz "[PLAYER] You are stunned and cannot attack this turn!\n"
     msg_dragon_stunned: .asciiz "[DRAGON] The dragon is stunned and cannot attack this turn!\n"
     msg_damage:     .asciiz "Damage dealt: "
     msg_miss:       .asciiz "ATTACK MISSED!\n"
     msg_crit:       .asciiz "CRITICAL HIT!!! "
-    msg_choose_action: .asciiz "\n[PLAYER] Choose action: (1) Attack, (2) Sword, (3) Flank, (4) Lance, (5) Quiz - "
+    msg_choose_action: .asciiz "\n[PLAYER] Choose action: (1) Attack, (2) Sword, (3) Flank, (4) Lance, (5) Quiz, (6) Estus Flask - "
     msg_win:        .asciiz "\n*** VICTORY! - Dragon Defeated! ***\n"
     msg_lose:       .asciiz "\n*** DEFEAT... ***\n"
     msg_win_debt:   .asciiz "\n*** VICTORY BY COMPOUND INTEREST! Debt reached 10,000! ***\n"
@@ -113,7 +121,14 @@
     msg_status:     .asciiz "\n--- BATTLE STATUS ---\n"
     msg_player_hp:  .asciiz "Player - HP: "
     msg_player_debt:.asciiz " | Debt Counter: "
+    msg_estus_count:.asciiz " | Estus Flasks: "
     msg_monster_hp: .asciiz "\nDragon - HP: "
     msg_monster_debt:.asciiz "\n[DEBT COUNTER: "
     msg_debt_limit: .asciiz " / 10,000]"
+    msg_estus_used:.asciiz "\n[PLAYER] Drank Estus Flask! Regenerating "
+    msg_estus_heal: .asciiz " HP per round for 2 rounds!\n"
+    msg_no_estus: .asciiz "\n[ERROR] You have no Estus Flasks left!\n"
+    msg_hp_restored:.asciiz "HP Restored: "
+    msg_estus_active:.asciiz "[ESTUS ACTIVE] Rounds remaining: "
+    msg_rounds_left:.asciiz "\n"
     newline:        .asciiz "\n"

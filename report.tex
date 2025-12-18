@@ -43,20 +43,22 @@ O projeto segue uma arquitetura modular para garantir a manutenibilidade e organ
 \section{Mecânicas de Jogo}
 
 \subsection{Sistema de Combate}
-O combate é baseado em turnos. O jogador tem acesso a cinco ações distintas:
+O combate é baseado em turnos. O jogador tem acesso a seis ações distintas:
 \begin{enumerate}
-    \item \textbf{Ataque Normal}: Dano padrão com uma taxa de acerto equilibrada (80\%).
-    \item \textbf{Espada (Sword)}: Um movimento tático que atordoa o dragão, fazendo-o perder um turno, mas não causa dano direto.
-    \item \textbf{Flanco (Flank)}: Um ataque de alto risco e alta recompensa com 40\% de chance de acerto crítico.
-    \item \textbf{Lança (Lance)}: Uma postura defensiva que causa menos dano, mas aumenta a evasão do jogador para o próximo turno.
+    \item \textbf{Ataque Normal}: Dano padrão com uma taxa de acerto equilibrada (80\%), dano: 10-19 HP (25 crítico).
+    \item \textbf{Espada (Sword)}: Um movimento tático que atordoa o dragão, fazendo-o perder um turno, mas não causa dano direto. Taxa de acerto: 80\%.
+    \item \textbf{Flanco (Flank)}: Um ataque de alto risco e alta recompensa com 40\% de chance de acerto crítico. Dano: 15-24 HP (30 crítico).
+    \item \textbf{Lança (Lance)}: Uma postura defensiva que causa menos dano (5-9 HP, 15 crítico), mas aumenta a evasão do jogador para o próximo turno.
     \item \textbf{Quiz}: Uma habilidade especial que aciona uma pergunta sobre arquitetura de computadores.
+    \item \textbf{Estus Flask}: Um item consumível em referência ao jogo Dark Souls. Regenera 25 HP por turno durante 2 turnos. O jogador começa com 2 frascos.
 \end{enumerate}
 
-O Dragão atua como o oponente de IA com três comportamentos aleatórios:
+O Dragão atua como o oponente de IA com quatro comportamentos aleatórios (25\% cada):
 \begin{itemize}
-    \item \textbf{Sopro de Fogo}: Ataque de alto dano.
-    \item \textbf{Pisar (Stomp)}: Atordoa o jogador.
-    \item \textbf{Voar (Fly)}: Aumenta a evasão do dragão, tornando-o mais difícil de acertar.
+    \item \textbf{Sopro de Fogo}: Ataque padrão com dano de 25-40 HP (60 crítico). Taxa de acerto: 65\% com 15\% de chance de crítico.
+    \item \textbf{Pisar (Stomp)}: Atordoa o jogador, reduzindo a dívida em 5\%. Sem dano direto.
+    \item \textbf{Voar (Fly)}: Aumenta a evasão do dragão, tornando-o mais difícil de acertar. Requer 50+ para acertar no próximo turno.
+    \item \textbf{Inferno}: Um ataque devastador que causa 45-65 HP de dano com 80\% de taxa de acerto, ignorando a maioria dos bônus de evasão do jogador.
 \end{itemize}
 
 \subsection{Sistema de Dívida de Juros Compostos}
@@ -75,7 +77,31 @@ O jogo integra conteúdo educacional diretamente na jogabilidade. A ação "Quiz
     \item \textbf{Resposta Errada}: Penaliza o jogador com perda de HP.
 \end{itemize}
 
+\section{Balanceamento e Dinâmica de Dificuldade}
+Durante o desenvolvimento iterativo, foi implementado um sistema de balanceamento estratégico para criar dinâmica de complexidade no jogo:
+
+\subsection{Ajustes de Dificuldade}
+\begin{itemize}
+    \item \textbf{Dano do Dragão}: Aumentado de 20-35 para 25-40 HP, tornando o inimigo mais ameaçador.
+    \item \textbf{Chance de Crítico}: Aumentada de 5\% para 15\%, criando momentos de risco maior.
+    \item \textbf{Ataque Inferno}: Novo ataque devastador (45-65 HP) com 80\% de acerto, força a tomada de decisões tática.
+    \item \textbf{Estus Flasks Limitadas}: Reduzidas de 3 para 2, criando dilema estratégico entre usar agora ou guardar.
+    \item \textbf{Duração da Poção}: Reduzida de 3 para 2 rodadas, criando janela de vulnerabilidade.
+\end{itemize}
+
+Esta configuração cria decisões tática reais: o jogador deve escolher entre atacar agressivamente, defender-se com Lance, ou gastar seus recursos limitados de Estus Flask preventivamente.
+
 \section{Implementação Técnica}
+
+\subsection{Arquitetura Modular Melhorada}
+Para facilitar a manutenção e reutilização de código, a arquitetura foi reorganizada em arquivos especializados:
+
+\begin{itemize}
+    \item \textbf{macros.asm}: Define macros globais como \texttt{draw\_rectangle} que são reutilizadas em todo o projeto.
+    \item \textbf{include\_all.asm}: Arquivo centralizador que garante a ordem correta de inclusão de módulos, evitando problemas de símbolos não encontrados.
+\end{itemize}
+
+A ordem de carregamento é crítica: macros → dados → sprites → lógica de batalha → quiz → renderização.
 
 \subsection{Motor Gráfico}
 O jogo roda em um display de 256x256 pixels com profundidade de cor de 32 bits. O módulo \texttt{rendering.asm} usa endereçamento de memória eficiente para desenhar os pixels.

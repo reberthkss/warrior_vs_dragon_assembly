@@ -186,6 +186,18 @@ show_status:
     lw $a0, playerHP
     syscall
     li $v0, 4
+    la $a0, msg_player_debt
+    syscall
+    li $v0, 1
+    lw $a0, debtCounter
+    syscall
+    li $v0, 4
+    la $a0, msg_estus_count
+    syscall
+    li $v0, 1
+    lw $a0, estusFlaskCount
+    syscall
+    li $v0, 4
     la $a0, newline
     syscall
     
@@ -213,6 +225,20 @@ show_status:
     li $v0, 4
     la $a0, newline
     syscall
+    
+    # Estus Flask Effect Status
+    lw $t0, estusFlaskActive
+    beqz $t0, skip_estus_status
+    li $v0, 4
+    la $a0, msg_estus_active
+    syscall
+    li $v0, 1
+    lw $a0, estusFlaskCounter
+    syscall
+    li $v0, 4
+    la $a0, msg_rounds_left
+    syscall
+    skip_estus_status:
     
     lw $ra, 0($sp)
     addi $sp, $sp, 4

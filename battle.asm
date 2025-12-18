@@ -201,17 +201,18 @@ monster_turn:
 
 dragon_can_act:
     # Dragon randomly chooses attack type
-    # 33% Fire Breath, 33% Stomp, 33% Fly
+    # 25% Fire Breath, 25% Stomp, 25% Fly, 25% Inferno (new devastating attack)
     li $v0, 42
     li $a0, 0
-    li $a1, 3
+    li $a1, 4
     syscall
     move $t0, $a0
     
     beq $t0, 1, dragon_stomp
     beq $t0, 2, dragon_fly
+    beq $t0, 3, dragon_inferno
     
-    # Fire Breath Attack
+    # Fire Breath Attack (default case 0)
     li $v0, 4
     la $a0, msg_monster_atk
     syscall
@@ -267,6 +268,67 @@ dragon_fly:
     sw $t0, dragonFlying
     
     # No HP damage, no debt for fly
+    
+    li $t0, 0
+    sw $t0, turn
+    j game_loop
+
+dragon_inferno:
+    # Inferno attack - devastating fire attack that ignores some defense
+    li $v0, 4
+    la $a0, msg_inferno
+    syscall
+    
+    # Inferno has higher hit chance and always deals massive damage
+    # 80% hit rate (ignores evasion effects mostly)
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $a0
+    
+    blt $t0, 20, inferno_missed  # 20% miss chance
+    
+    # Inferno always deals 45-65 damage (higher than normal attacks)
+    li $v0, 42
+    li $a0, 0
+    li $a1, 21
+    syscall
+    addi $v0, $a0, 45
+    
+    # Show damage
+    move $t9, $v0
+    li $v0, 4
+    la $a0, msg_damage
+    syscall
+    li $v0, 1
+    move $a0, $t9
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
+    move $s0, $t9
+    
+    # Reduce Player HP
+    lw $t1, playerHP
+    sub $t1, $t1, $s0
+    sw $t1, playerHP
+    
+    # Apply Dragon Debt Payment
+    jal apply_dragon_payment
+    
+    # Reset evasion
+    sw $zero, playerEvasion
+    
+    li $t0, 0
+    sw $t0, turn
+    j game_loop
+    
+    inferno_missed:
+    li $v0, 4
+    la $a0, msg_miss
+    syscall
     
     li $t0, 0
     sw $t0, turn
@@ -350,24 +412,23 @@ calculate_dragon_damage:
     j dragon_normal_damage
     
     dragon_normal_hit_check:
-    bge $t0, 30, attack_missed  # 70% chance to miss
-    bge $t0, 25, dragon_critical_hit  # 5% chance of critical
+    bge $t0, 35, attack_missed  # 65% chance to miss (increased threat)
+    bge $t0, 20, dragon_critical_hit  # 15% chance of critical (increased threat)
 
     dragon_normal_damage:
-    # Normal attack - High damage (20-35)
+    # Normal attack - Increased damage (25-40) - more threatening
     li $v0, 42
     li $a0, 0
     li $a1, 16
     syscall
-    addi $v0, $a0, 20
+    addi $v0, $a0, 25
     j print_damage
 
-dragon_critical_hit:
+    dragon_critical_hit:
     li $v0, 4
     la $a0, msg_crit
     syscall
-    li $v0, 50
-    j print_damage
+    li $v0, 60
 
 calculate_flank_damage:
     # $a0 = 1 if dragon is flying (reduced hit chance), 0 otherwise
@@ -509,4 +570,119 @@ apply_dragon_payment:
     store_payment:
     sw $t0, debtCounter
     
+    jr $ra
+# ----------------------------------------------------------------
+# CONSUMABLE ITEMS - ESTUS FLASK (Dark Souls Reference)
+# ----------------------------------------------------------------
+player_use_estus:
+    # Check if player has Estus Flasks
+    lw $t0, estusFlaskCount
+    blez $t0, no_estus_available
+    
+    # Check if Estus Flask is already active
+    lw $t1, estusFlaskActive
+    beqz $t1, estus_not_active
+    
+    # Estus Flask already active - can't use another
+    li $v0, 4
+    la $a0, msg_no_estus
+    syscall
+    j player_turn
+    
+    estus_not_active:
+    # Display Estus Flask use message
+    li $v0, 4
+    la $a0, msg_estus_used
+    syscall
+    
+    # Show heal amount
+    li $v0, 1
+    lw $a0, estusFlaskHeal
+    syscall
+    
+    li $v0, 4
+    la $a0, msg_estus_heal
+    syscall
+    
+    # Activate Estus Flask
+    li $t2, 1
+    sw $t2, estusFlaskActive
+    lw $t3, estusFlaskRounds
+    sw $t3, estusFlaskCounter
+    
+    # Decrement flask count
+    addi $t0, $t0, -1
+    sw $t0, estusFlaskCount
+    
+    # Apply first heal immediately
+    lw $t4, playerHP
+    lw $t5, estusFlaskHeal
+    add $t4, $t4, $t5
+    
+    # Cap at max HP (100)
+    li $t6, 100
+    blt $t4, $t6, store_healed_hp_estus
+    move $t4, $t6
+    store_healed_hp_estus:
+    sw $t4, playerHP
+    
+    # Show HP restored
+    li $v0, 4
+    la $a0, msg_hp_restored
+    syscall
+    li $v0, 1
+    move $a0, $t5
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
+    # End turn
+    li $t7, 1
+    sw $t7, turn
+    
+    li $v0, 32
+    li $a0, 500
+    syscall
+    j game_loop
+    
+    no_estus_available:
+    li $v0, 4
+    la $a0, msg_no_estus
+    syscall
+    j player_turn
+
+# ----------------------------------------------------------------
+# APPLY ESTUS FLASK REGEN (called each turn)
+# ----------------------------------------------------------------
+apply_estus_regen:
+    # Check if Estus Flask is active
+    lw $t0, estusFlaskActive
+    beqz $t0, estus_regen_end
+    
+    # Apply heal
+    lw $t1, playerHP
+    lw $t2, estusFlaskHeal
+    add $t1, $t1, $t2
+    
+    # Cap at max HP
+    li $t3, 100
+    blt $t1, $t3, store_regen_hp_estus
+    move $t1, $t3
+    store_regen_hp_estus:
+    sw $t1, playerHP
+    
+    # Decrement counter
+    lw $t4, estusFlaskCounter
+    addi $t4, $t4, -1
+    sw $t4, estusFlaskCounter
+    
+    # Check if flask effect ends
+    bgtz $t4, estus_regen_end
+    
+    # Flask expired
+    sw $zero, estusFlaskActive
+    sw $zero, estusFlaskCounter
+    
+    estus_regen_end:
     jr $ra
