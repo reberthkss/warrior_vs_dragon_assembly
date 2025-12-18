@@ -5,8 +5,9 @@ from PIL import Image
 # Lista de ativos: (Nome do Arquivo, Nome do Label, Largura Desejada)
 ASSETS = [
     # ("warrior.png", "sprite_player", 48),   # Guerreiro: Pequeno (48px)
-    ("warrior_defeated.png", "sprite_player_defeated", 48),   # Guerreiro: Pequeno (48px)
+    # ("warrior_defeated.png", "sprite_player_defeated", 48),   # Guerreiro: Pequeno (48px)
     # ("dragon.png",    "sprite_dragon", 110)   # Dragão: GIGANTE (110px)
+    ("dragon_defeated.png",    "sprite_dragon_defeated", 110)   # Dragão: GIGANTE (110px)
 ]
 # --------------------------------
 
