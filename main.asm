@@ -56,6 +56,11 @@ game_loop:
 # PLAYER TURN
 # ----------------------------------------------------------------
 player_turn:
+    # Increment turn counter at start of player's turn (new round)
+    lw $t0, turnCounter
+    addi $t0, $t0, 1
+    sw $t0, turnCounter
+    
     # Check if player is stunned
     lw $t0, playerStunned
     beqz $t0, player_can_act

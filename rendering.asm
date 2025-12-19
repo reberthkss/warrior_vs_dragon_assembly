@@ -236,6 +236,17 @@ show_status:
     la $a0, msg_status
     syscall
     
+    # Turn Counter
+    li $v0, 4
+    la $a0, msg_turn_num
+    syscall
+    li $v0, 1
+    lw $a0, turnCounter
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
     # Player Status
     li $v0, 4
     la $a0, msg_player_hp
