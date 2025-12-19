@@ -1,0 +1,221 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{hyperref}
+
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+
+\title{Guerreiro vs Dragão: Projeto de Jogo em Assembly MIPS}
+\author{Bruno Alves - 147938 \\ Reberth Kelvin Santos de Siqueira - 141589 }
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este relatório detalha a implementação de "Guerreiro vs Dragão", um jogo de estratégia em turnos desenvolvido como trabalho final para a disciplina de Arquitetura e Organização de Computadores, ministrada pelo Prof. Dr. Fabio Augusto Menocci Cappa no segundo semestre de 2025 na Universidade Federal de São Paulo (UNIFESP). O projeto demonstra conceitos avançados de programação em assembly MIPS, incluindo arquitetura modular, renderização gráfica e lógica de jogo complexa. Uma característica única deste jogo é a mecânica de "Dívida de Juros Compostos", que serve como uma condição de vitória alternativa ao combate tradicional baseado em HP.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Introdução}
+"Guerreiro vs Dragão" é um jogo de batalha gráfico em turnos onde o jogador controla um guerreiro lutando contra um dragão. O projeto foi projetado para demonstrar as capacidades da linguagem Assembly MIPS em lidar com lógica, aritmética e E/S mapeada em memória para gráficos.
+
+O objetivo principal é derrotar o dragão reduzindo seus Pontos de Vida (HP) a zero, ou alternativamente, acumular um "Contador de Dívida" de 10.000 através de uma mecânica de juros compostos, efetivamente dominando o inimigo com estratégia econômica.
+
+\section{Arquitetura do Sistema}
+O projeto segue uma arquitetura modular para garantir a manutenibilidade e organização do código. A base de código é dividida em vários módulos funcionais:
+
+\begin{itemize}
+    \item \textbf{main.asm}: O ponto de entrada da aplicação. Gerencia o loop principal do jogo, verifica as condições de fim de jogo (Vitória/Derrota) e gerencia a lógica de turnos de alto nível.
+    \item \textbf{data.asm}: Serve como o repositório central para todas as variáveis de estado do jogo (HP, dívida, contadores de turno), constantes (cores, endereços de memória) e strings de texto (mensagens de UI, perguntas do quiz).
+    \item \textbf{macros.asm}: Define macros globais reutilizáveis em todo o projeto, como \texttt{draw\_rectangle} que encapsula a chamada à função de desenho de retângulos, simplificando o código de renderização.
+    \item \textbf{battle.asm}: Contém a lógica central de combate. Implementa as funções para os ataques do jogador, comportamento da IA do dragão, cálculos de dano e os algoritmos de juros compostos.
+    \item \textbf{quiz.asm}: Implementa um sub-sistema educacional. Gerencia a habilidade ``Quiz'', lidando com a seleção de perguntas, validação de respostas e aplicação de recompensas especiais por respostas corretas.
+    \item \textbf{rendering.asm}: O motor gráfico. Lida com escritas diretas no display mapeado em memória (0x10040000) para renderizar o céu, chão, sprites (Guerreiro e Dragão) e barras de HP dinâmicas.
+    \item \textbf{sprites.asm}: Armazena os dados gráficos dos personagens do jogo. Cada sprite é definido com um cabeçalho contendo largura e altura, seguido pelos valores de cor RGBA de cada pixel. Inclui quatro sprites principais: \texttt{sprite\_player} (guerreiro em pé, 64x34 pixels), \texttt{sprite\_player\_defeated} (guerreiro derrotado deitado, 48x32 pixels), \texttt{sprite\_dragon} (dragão padrão, 64x34 pixels) e \texttt{sprite\_dragon\_defeated} (dragão derrotado, 110x73 pixels). A cor 0x00000000 é tratada como transparente pelo motor de renderização.
+\end{itemize}
+
+\subsection{Geração de Sprites}
+Para facilitar a criação de sprites, foi desenvolvido o script Python \texttt{sprites/converter\_sprites.py} que converte imagens PNG em formato compatível com MIPS Assembly. O conversor redimensiona as imagens para a largura desejada, extrai os valores RGB de cada pixel e gera automaticamente o código Assembly no formato \texttt{.word} adequado para inclusão no arquivo \texttt{sprites.asm}.
+
+\section{Personagens}
+
+O jogo apresenta dois personagens principais em um confronto épico:
+
+\subsection{O Guerreiro (Jogador)}
+O protagonista é um guerreiro medieval controlado pelo jogador. Ele possui:
+\begin{itemize}
+    \item \textbf{HP Inicial}: 100 pontos de vida
+    \item \textbf{Posição no Display}: Lado esquerdo da tela (X=50, Y=185)
+    \item \textbf{Sprite}: 64x34 pixels, com versão alternativa para estado de derrota (48x32 pixels, deitado no chão)
+    \item \textbf{Recursos}: 2 Estus Flasks para recuperação de HP
+    \item \textbf{Habilidades}: 6 ações disponíveis (Ataque Normal, Espada, Flanco, Lança, Quiz e Estus Flask)
+\end{itemize}
+
+\subsection{O Dragão (Inimigo)}
+O antagonista é um poderoso dragão controlado pela IA do jogo. Ele possui:
+\begin{itemize}
+    \item \textbf{HP Inicial}: 1000 pontos de vida (compensando sua baixa taxa de acerto)
+    \item \textbf{Posição no Display}: Lado direito da tela (X=180, Y=185), podendo voar para Y=140
+    \item \textbf{Sprite}: 64x34 pixels normalmente, com versão de derrota maior (110x73 pixels)
+    \item \textbf{Comportamento}: Seleção aleatória entre 4 ataques (25\% cada)
+    \item \textbf{Ataques}: Sopro de Fogo, Pisar (Stomp), Voar (Fly) e Inferno
+\end{itemize}
+
+\section{Mecânicas de Jogo}
+
+\subsection{Apresentação de Informações}
+O jogo opera em um sistema de turnos alternados entre o jogador e o dragão. Para acompanhar a batalha completamente, é necessário observar duas interfaces simultaneamente:
+
+\textbf{Console (Run I/O):}
+\begin{itemize}
+    \item Exibe o menu de ações disponíveis para o jogador
+    \item Mostra mensagens de ataque, dano causado e efeitos especiais
+    \item Apresenta o status da batalha (HP do jogador, HP do dragão, contador de dívida)
+    \item Recebe a entrada do jogador (números 1-6 para selecionar ações)
+    \item Exibe as perguntas do quiz e suas opções de resposta
+\end{itemize}
+
+\textbf{Bitmap Display:}
+\begin{itemize}
+    \item Renderiza os sprites do guerreiro e do dragão
+    \item Mostra o cenário (céu azul e chão verde)
+    \item Exibe as barras de HP de ambos os personagens
+    \item Indica visualmente o turno atual através de um cursor amarelo
+    \item Mostra o dragão em posição elevada quando está voando
+    \item Exibe sprites de derrota quando um personagem é derrotado
+\end{itemize}
+
+Esta combinação de saída textual e gráfica proporciona uma experiência completa, onde o console fornece informações detalhadas sobre as mecânicas do jogo enquanto o display visual oferece feedback imediato sobre o estado da batalha.
+
+\subsection{Sistema de Combate}
+O combate é baseado em turnos. O jogador tem acesso a seis ações distintas:
+\begin{enumerate}
+    \item \textbf{Ataque Normal}: Dano padrão com uma taxa de acerto equilibrada (80\%), dano: 10-19 HP (25 crítico).
+    \item \textbf{Espada (Sword)}: Um movimento tático que atordoa o dragão, fazendo-o perder um turno, mas não causa dano direto. Taxa de acerto: 40\%.
+    \item \textbf{Flanco (Flank)}: Um ataque de alto risco e alta recompensa com 40\% de chance de acerto crítico. Dano: 15-24 HP (30 crítico).
+    \item \textbf{Lança (Lance)}: Uma postura defensiva que causa menos dano (5-9 HP, 15 crítico), mas aumenta a evasão do jogador para o próximo turno.
+    \item \textbf{Quiz}: Uma habilidade especial que aciona uma pergunta sobre arquitetura de computadores.
+    \item \textbf{Estus Flask}: Um item consumível inspirado na icônica mecânica de recuperação de HP do jogo \textit{Dark Souls}, onde o jogador carrega frascos de uma substância curativa dourada chamada ``Estus''. No contexto deste jogo, as Estus Flasks funcionam como um recurso estratégico limitado: o jogador começa a batalha com apenas 2 frascos disponíveis. Ao usar uma flask, o guerreiro regenera 25 HP por turno durante 2 turnos consecutivos, totalizando 50 HP de cura se os dois turnos forem completados. Esta limitação força o jogador a tomar decisões táticas sobre quando usar este recurso precioso — usar cedo demais pode deixá-lo vulnerável mais tarde, enquanto esperar demais pode resultar em derrota.
+\end{enumerate}
+
+\begin{table}[h]
+\centering
+\caption{Taxas de Acerto do Jogador}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Ataque} & \textbf{Acerto (Normal)} & \textbf{Acerto (Dragão Voando)} & \textbf{Crítico} & \textbf{Dano} \\
+\hline
+Normal & 80\% & 50\% & 15\% & 10-19 (25 crit) \\
+\hline
+Espada & 40\% & 20\% & -- & Atordoa \\
+\hline
+Flanco & 80\% & 50\% & 40\% & 15-24 (30 crit) \\
+\hline
+Lança & 80\% & 50\% & 15\% & 5-9 (15 crit) \\
+\hline
+\end{tabular}
+\end{table}
+
+O Dragão atua como o oponente de IA com quatro comportamentos aleatórios (25\% cada):
+\begin{itemize}
+    \item \textbf{Sopro de Fogo}: Ataque padrão com dano de 25-40 HP (60 crítico). Taxa de acerto: 35\% com 15\% de chance de crítico.
+    \item \textbf{Pisar (Stomp)}: Atordoa o jogador, reduzindo a dívida em 5\%. Sem dano direto.
+    \item \textbf{Voar (Fly)}: Aumenta a evasão do dragão, tornando-o mais difícil de acertar. Requer 50+ para acertar no próximo turno.
+    \item \textbf{Inferno}: Um ataque devastador que causa 45-65 HP de dano com 80\% de taxa de acerto, ignorando a maioria dos bônus de evasão do jogador.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Taxas de Acerto do Dragão}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Ataque} & \textbf{Acerto (Normal)} & \textbf{Acerto (Jogador Evasivo)} & \textbf{Crítico} & \textbf{Dano} \\
+\hline
+Sopro de Fogo & 35\% & 50\% & 15\% & 25-40 (60 crit) \\
+\hline
+Pisar & 100\% & 100\% & -- & Atordoa \\
+\hline
+Voar & 100\% & 100\% & -- & Nenhum \\
+\hline
+Inferno & 80\% & 80\% & -- & 45-65 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Sistema de Dívida de Juros Compostos}
+Uma mecânica única envolvendo um "Contador de Dívida".
+\begin{itemize}
+    \item \textbf{Crescimento}: Cada vez que o jogador acerta um golpe, o contador de dívida cresce 10\% mais um valor base de 100.
+    \item \textbf{Redução}: Quando o dragão atinge o jogador, a dívida é reduzida em 5\%, simulando um revés.
+    \item \textbf{Vitória}: Se o contador de dívida atingir 10.000, o jogador vence imediatamente via "Vitória por Juros Compostos".
+    \item \textbf{Inspiração}: Esta mecânica foi inspirada nas habilidades do personagem Knuckle Bine, do anime \textit{Hunter x Hunter}, onde o acumulo de "juros" de aura leva à derrota do oponente.
+\end{itemize}
+
+\subsection{Quiz Educacional}
+O jogo integra conteúdo educacional diretamente na jogabilidade. A ação "Quiz" apresenta perguntas aleatórias sobre Arquitetura de Computadores (ex: sobre ULA, RAM, Barramentos).
+\begin{itemize}
+    \item \textbf{Resposta Correta}: Aplica a fórmula de juros compostos 5 vezes instantaneamente, fornecendo um grande impulso para a condição de vitória por dívida.
+    \item \textbf{Resposta Errada}: Penaliza o jogador com perda de HP.
+\end{itemize}
+
+\subsection{Condições de Vitória e Derrota}
+O jogo apresenta múltiplas formas de conclusão da batalha:
+
+\textbf{Vitória do Jogador:}
+\begin{itemize}
+    \item \textbf{Vitória por HP}: Reduzir o HP do dragão a zero ou menos através de ataques diretos.
+    \item \textbf{Vitória por Juros Compostos}: Acumular o contador de dívida até atingir 10.000 pontos. Esta é a vitória estratégica que recompensa jogadores que conseguem manter pressão constante enquanto evitam dano.
+\end{itemize}
+
+\textbf{Derrota do Jogador:}
+\begin{itemize}
+    \item \textbf{Derrota por HP}: O jogador perde quando seu HP chega a zero ou menos. Neste momento, o guerreiro é exibido em sua sprite de derrota (deitado no chão) e a barra de HP muda para vermelho.
+\end{itemize}
+
+
+\section{Implementação Técnica}
+
+\subsection{Motor Gráfico}
+O jogo roda em um display de 256x256 pixels com profundidade de cor de 32 bits. O módulo \texttt{rendering.asm} usa endereçamento de memória eficiente para desenhar os pixels.
+\begin{itemize}
+    \item \textbf{Cálculo de Endereço}: $Base + (Y \times 256 + X) \times 4$. A multiplicação por 256 é otimizada usando um deslocamento lógico à esquerda (\texttt{sll}) de 8 bits.
+    \item \textbf{Sprites}: Sprites são armazenados com cabeçalhos de largura e altura, e o loop de renderização ignora a cor de transparência (0x00000000) para sobrepor os personagens no fundo.
+\end{itemize}
+
+\subsection{Geração de Números Aleatórios}
+O jogo utiliza extensivamente a chamada de sistema (syscall) 42 para gerar números aleatórios para determinar:
+\begin{itemize}
+    \item Sucesso do ataque (cálculos de Acerto/Erro).
+    \item Acertos críticos.
+    \item Escolhas da IA do Dragão.
+    \item Seleção de perguntas do Quiz.
+\end{itemize}
+
+\subsection{Ambiente de Teste}
+O projeto foi desenvolvido e validado utilizando o simulador MARS (MIPS Assembler and Runtime Simulator). Para a saída gráfica, foi utilizada a ferramenta \textit{Bitmap Display} incluída no simulador, com as seguintes configurações específicas para garantir a visualização correta:
+
+\begin{itemize}
+    \item \textbf{Unit Width in Pixels}: 1
+    \item \textbf{Unit Height in Pixels}: 1
+    \item \textbf{Display Width in Pixels}: 256
+    \item \textbf{Display Height in Pixels}: 256
+    \item \textbf{Base address for display}: 0x10040000 (heap)
+\end{itemize}
+
+\section{Desafios e Decisões de Projeto}
+Durante o desenvolvimento do projeto, foram identificados desafios técnicos significativos, especialmente relacionados à renderização gráfica. Um dos principais obstáculos foi o desenho do \textit{bitmap}, onde inicialmente tentou-se utilizar um endereço de memória estático para a manipulação dos pixels. No entanto, para o correto funcionamento com a ferramenta de display gráfico do simulador, deveríamos ter utilizado o endereço de memória da \textit{heap} (dinâmica). Essa divergência causou dificuldades iniciais na exibição correta das sprites e cores na tela, exigindo uma refatoração do código de renderização para apontar para o endereço base correto (0x10040000).
+
+Além disso, devido à complexidade inerente ao desenvolvimento em baixo nível com Assembly, foi tomada a decisão de priorizar a profundidade e robustez das mecânicas de jogo — como o sistema de combate, as perguntas do quiz e o cálculo de juros compostos — em detrimento de uma apresentação visual mais elaborada. O foco principal foi garantir que a lógica do jogo funcionasse perfeitamente, mantendo os gráficos funcionais, porém simples, para assegurar a entrega de um sistema estável e livre de bugs críticos.
+
+\section{Conclusão}
+O projeto "Guerreiro vs Dragão" cria com sucesso um jogo RPG envolvente usando linguagem Assembly de baixo nível. Ele demonstra que lógica complexa, design de software modular e interfaces gráficas podem ser efetivamente implementados mesmo sem abstrações de alto nível, fornecendo insights profundos sobre arquitetura de computadores e operações em nível de máquina.
+
+\end{document}

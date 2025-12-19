@@ -20,31 +20,76 @@ render_all:
     draw_rectangle(0, 200, 256, 56, COLOR_GROUND)
 
     # 2. Draw Warrior
-    # Positioned on ground (Y=190 approx)
+    # Check if player is defeated to draw lying down
+    lw $t0, playerHP
+    blez $t0, draw_player_defeated
+    
+    # Normal standing warrior
     li $a0, 50             # X
     li $a1, 185            # Y
     la $a2, sprite_player
     jal draw_sprite_pro
+    j done_draw_player
+    
+    draw_player_defeated:
+    # Draw player lying on the ground using defeated sprite
+    li $a0, 30             # X - slightly to the left
+    li $a1, 195            # Y - on the ground
+    la $a2, sprite_player_defeated
+    jal draw_sprite_pro
+    
+    done_draw_player:
 
     # 3. Draw Dragon
-    # Positioned on ground right side
+    # Check if dragon is defeated
+    lw $t0, monsterHP
+    blez $t0, draw_dragon_defeated
+    
+    # Check if dragon is flying to adjust Y position
+    lw $t0, dragonFlying
     li $a0, 180            # X
-    li $a1, 185            # Y
+    beqz $t0, dragon_on_ground
+    li $a1, 140            # Y when flying (higher in the sky)
+    j draw_dragon_sprite
+    dragon_on_ground:
+    li $a1, 185            # Y when on ground
+    draw_dragon_sprite:
     la $a2, sprite_dragon
     jal draw_sprite_pro
+    j done_draw_dragon
+    
+    draw_dragon_defeated:
+    # Draw defeated dragon on the ground
+    li $a0, 140            # X - centered
+    li $a1, 175            # Y - on ground
+    la $a2, sprite_dragon_defeated
+    jal draw_sprite_pro
+    
+    done_draw_dragon:
 
     # 4. Health Bars
     # Player Bar (100 HP max = 50 pixels max)
     lw $t0, playerHP
-    blez $t0, skip_hp_player
+    blez $t0, player_hp_defeated
     div $t0, $t0, 2     # Scale (100 HP = 50 pixels)
     mflo $a2
-    blez $a2, skip_hp_player
+    blez $a2, player_hp_defeated
     li $a0, 50
     li $a1, 175
     li $v1, 4           # Height 4 pixels
-    lw $a3, COLOR_HP_FULL
+    lw $a3, COLOR_HP_FULL   # Green when alive
     jal func_draw_rect
+    j skip_hp_player
+    
+    player_hp_defeated:
+    # Draw red bar when player is defeated
+    li $a0, 50
+    li $a1, 175
+    li $a2, 5           # Minimum bar width to show defeat
+    li $v1, 4           # Height 4 pixels
+    lw $a3, COLOR_HP_DMG    # Red when defeated
+    jal func_draw_rect
+    
     skip_hp_player:
 
     # Dragon Bar
@@ -54,7 +99,14 @@ render_all:
     mflo $a2
     blez $a2, skip_hp_monster
     li $a0, 180
-    li $a1, 175
+    # Check if dragon is flying to adjust HP bar Y position
+    lw $t1, dragonFlying
+    beqz $t1, dragon_hp_ground
+    li $a1, 130            # Y when flying (higher)
+    j draw_dragon_hp
+    dragon_hp_ground:
+    li $a1, 175            # Y when on ground
+    draw_dragon_hp:
     li $v1, 4
     lw $a3, COLOR_HP_FULL
     jal func_draw_rect
@@ -66,7 +118,13 @@ render_all:
     draw_rectangle(60, 160, 10, 5, COLOR_CURSOR) # Near player
     j end_render
     cursor_dragon:
-    draw_rectangle(190, 160, 10, 5, COLOR_CURSOR) # Near dragon
+    # Check if dragon is flying to adjust cursor Y position
+    lw $t1, dragonFlying
+    beqz $t1, cursor_dragon_ground
+    draw_rectangle(190, 115, 10, 5, COLOR_CURSOR) # Near flying dragon
+    j end_render
+    cursor_dragon_ground:
+    draw_rectangle(190, 160, 10, 5, COLOR_CURSOR) # Near dragon on ground
 
 end_render:
     lw $ra, 0($sp)
@@ -178,12 +236,35 @@ show_status:
     la $a0, msg_status
     syscall
     
+    # Turn Counter
+    li $v0, 4
+    la $a0, msg_turn_num
+    syscall
+    li $v0, 1
+    lw $a0, turnCounter
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    
     # Player Status
     li $v0, 4
     la $a0, msg_player_hp
     syscall
     li $v0, 1
     lw $a0, playerHP
+    syscall
+    li $v0, 4
+    la $a0, msg_player_debt
+    syscall
+    li $v0, 1
+    lw $a0, debtCounter
+    syscall
+    li $v0, 4
+    la $a0, msg_estus_count
+    syscall
+    li $v0, 1
+    lw $a0, estusFlaskCount
     syscall
     li $v0, 4
     la $a0, newline
@@ -213,6 +294,20 @@ show_status:
     li $v0, 4
     la $a0, newline
     syscall
+    
+    # Estus Flask Effect Status
+    lw $t0, estusFlaskActive
+    beqz $t0, skip_estus_status
+    li $v0, 4
+    la $a0, msg_estus_active
+    syscall
+    li $v0, 1
+    lw $a0, estusFlaskCounter
+    syscall
+    li $v0, 4
+    la $a0, msg_rounds_left
+    syscall
+    skip_estus_status:
     
     lw $ra, 0($sp)
     addi $sp, $sp, 4

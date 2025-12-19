@@ -2,19 +2,8 @@
 # MAIN.ASM - Warrior vs Dragon Battle Game
 # ============================================
 
-# --- INCLUDE DATA & SPRITES ---
-.include "data.asm"
-.include "sprites.asm"
-
-# --- MACROS ---
-.macro draw_rectangle(%x, %y, %w, %h, %color_label)
-    li $a0, %x
-    li $a1, %y
-    li $a2, %w
-    li $v1, %h
-    lw $a3, %color_label
-    jal func_draw_rect
-.end_macro
+# --- INCLUDE ALL MODULES (centralized) ---
+.include "include_all.asm"
 
 # ----------------------------------------------------------------
 # MAIN
@@ -36,7 +25,10 @@ main:
     syscall
 
 game_loop:
-    # 1. Check Game Over
+    # 1. Apply Estus Flask regeneration if active
+    jal apply_estus_regen
+    
+    # 2. Check Game Over
     # Check HP
     lw $t0, playerHP
     blez $t0, game_over_lose
@@ -48,13 +40,13 @@ game_loop:
     lw $t3, debtLimit
     bge $t2, $t3, game_over_win_debt
 
-    # 2. Show Battle Status
+    # 3. Show Battle Status
     jal show_status
 
-    # 3. Render
+    # 4. Render
     jal render_all
 
-    # 4. Turn Logic
+    # 5. Turn Logic
     lw $t0, turn
     beq $t0, 0, player_turn
     beq $t0, 1, monster_turn
@@ -64,6 +56,11 @@ game_loop:
 # PLAYER TURN
 # ----------------------------------------------------------------
 player_turn:
+    # Increment turn counter at start of player's turn (new round)
+    lw $t0, turnCounter
+    addi $t0, $t0, 1
+    sw $t0, turnCounter
+    
     # Check if player is stunned
     lw $t0, playerStunned
     beqz $t0, player_can_act
@@ -97,7 +94,7 @@ player_can_act:
     syscall
     move $t0, $v0
     
-    # Check which action (1=Attack, 2=Sword, 3=Flank, 4=Lance, 5=Quiz)
+    # Check which action (1=Attack, 2=Sword, 3=Flank, 4=Lance, 5=Quiz, 6=Estus Flask)
     li $t1, 1
     beq $t0, $t1, player_normal_attack
     li $t1, 2
@@ -108,18 +105,26 @@ player_can_act:
     beq $t0, $t1, player_lance_attack
     li $t1, 5
     beq $t0, $t1, player_quiz_attack
+    li $t1, 6
+    beq $t0, $t1, player_use_estus
     j player_can_act  # Invalid input, ask again
 
 # ----------------------------------------------------------------
 # GAME OVER
 # ----------------------------------------------------------------
 game_over_win:
+    # Final render to show dragon defeated
+    jal render_all
+    
     li $v0, 4
     la $a0, msg_win
     syscall
     j exit
 
 game_over_lose:
+    # Final render to show defeated state
+    jal render_all
+    
     li $v0, 4
     la $a0, msg_lose
     syscall
@@ -135,7 +140,3 @@ exit:
     li $v0, 10
     syscall
 
-# --- INCLUDE GAME MODULES (after main) ---
-.include "battle.asm"
-.include "quiz.asm"
-.include "rendering.asm"
