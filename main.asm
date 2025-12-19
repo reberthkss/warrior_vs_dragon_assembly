@@ -108,6 +108,9 @@ player_can_act:
 # GAME OVER
 # ----------------------------------------------------------------
 game_over_win:
+    # Final render to show dragon defeated
+    jal render_all
+    
     li $v0, 4
     la $a0, msg_win
     syscall

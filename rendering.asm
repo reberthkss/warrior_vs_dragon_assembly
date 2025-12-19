@@ -41,6 +41,10 @@ render_all:
     done_draw_player:
 
     # 3. Draw Dragon
+    # Check if dragon is defeated
+    lw $t0, monsterHP
+    blez $t0, draw_dragon_defeated
+    
     # Check if dragon is flying to adjust Y position
     lw $t0, dragonFlying
     li $a0, 180            # X
@@ -52,6 +56,16 @@ render_all:
     draw_dragon_sprite:
     la $a2, sprite_dragon
     jal draw_sprite_pro
+    j done_draw_dragon
+    
+    draw_dragon_defeated:
+    # Draw defeated dragon on the ground
+    li $a0, 140            # X - centered
+    li $a1, 175            # Y - on ground
+    la $a2, sprite_dragon_defeated
+    jal draw_sprite_pro
+    
+    done_draw_dragon:
 
     # 4. Health Bars
     # Player Bar (100 HP max = 50 pixels max)
