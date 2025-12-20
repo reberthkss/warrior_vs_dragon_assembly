@@ -8,11 +8,11 @@ A turn-based battle game written in MIPS Assembly featuring a warrior fighting a
 The project has been refactored into a modular structure for better organization and maintainability:
 
 ### File Organization
-- **main.asm** - Main game loop, entry point, and turn handler (124 lines)
-- **data.asm** - Game variables, constants, and text messages (99 lines)
-- **battle.asm** - Player/dragon attack functions and damage calculations (452 lines)
-- **quiz.asm** - Quiz system with question handling and validation (284 lines)
-- **rendering.asm** - Graphics rendering engine, sprites, and HP bars (213 lines)
+- **main.asm** - Main game loop, entry point, and turn handler (143 lines)
+- **data.asm** - Game variables, constants, and text messages (139 lines)
+- **battle.asm** - Player/dragon attack functions and damage calculations (694 lines)
+- **quiz.asm** - Quiz system with question handling and validation (473 lines)
+- **rendering.asm** - Graphics rendering engine, sprites, and HP bars (315 lines)
 - **sprites.asm** - Sprite data for player and dragon (unchanged)
 - **sprites/converter_sprites.py** - Python utility to convert images to MIPS sprites
 
@@ -79,7 +79,7 @@ The project has been refactored into a modular structure for better organization
    - **Input**: Number (1-5) to select action
 
 #### Player Actions
-The player can choose from 5 different actions each turn:
+The player can choose from 6 different actions each turn:
 
 1. **Normal Attack**
    - Hit Chance: 80% (miss if random < 20)
@@ -103,7 +103,7 @@ The player can choose from 5 different actions each turn:
    - Applies compound interest on hit
    - Special: If dragon is flying, hit chance reduced to 50%
 
-4. **Lance Ability**
+4. **Spear Ability**
    - Defensive stance
    - Hit Chance: 80% (same as normal)
    - Critical Chance: 15% (if random ≥ 85)
@@ -129,10 +129,15 @@ The player can choose from 5 different actions each turn:
      5. Which component is exclusively an input device? (Answer: Teclado/Keyboard)
      6. What unit measures processor clock speed frequency? (Answer: Gigahertz/GHz)
    - Shows "Questoes restantes: X" before each quiz
-   - After all 6 correct answers, quiz becomes unavailable
+6. **Estus Flask (Heal)**
+   - **Limited Resource**: 2 charges total
+   - **Immediate Heal**: Restores 25 HP
+   - **Regeneration**: Restores 25 HP per round for 2 additional rounds
+   - Consumes player turn
+   - Cannot be used if another Estus effect is already active
 
 #### Dragon Attacks
-The dragon randomly chooses one of three attacks (33% each):
+The dragon randomly chooses one of four attacks (25% each):
 
 1. **Fire Breath**
    - Hit Chance: 30% (miss if random ≥ 30)
@@ -155,6 +160,12 @@ The dragon randomly chooses one of three attacks (33% each):
    - No damage or debt effect
    - Effect resets after player's next attack
 
+4. **Inferno**
+   - Devastating fire attack
+   - **High Hit Chance**: 80% (ignores most evasion)
+   - **Massive Damage**: 45-65 HP
+   - Reduces debt counter by 5% on hit
+
 #### Status Effects
 
 **Player Stunned** (`playerStunned`)
@@ -170,7 +181,7 @@ The dragon randomly chooses one of three attacks (33% each):
 - Resets after skipped turn
 
 **Player Evasion** (`playerEvasion`)
-- Activated by Lance ability
+- Activated by Spear ability
 - Reduces dragon's hit chance from 30% to 50% miss rate
 - Persists for the next dragon turn
 - Resets after dragon attacks or player uses another ability
@@ -222,7 +233,7 @@ Dragon - HP: [value]
 
 ### Action Menu
 ```
-[PLAYER] Choose action: (1) Attack, (2) Sword, (3) Flank, (4) Lance, (5) Quiz - 
+[PLAYER] Choose: (1)Attack (2)Sword (3)Flank (4)Spear (5)Quiz (6)Estus - 
 ```
 
 ## Key Functions by Module
@@ -241,14 +252,17 @@ Dragon - HP: [value]
 - `player_normal_attack`: Standard attack with compound interest
 - `player_sword_attack`: Stuns dragon, applies compound interest
 - `player_flank_attack`: High critical chance attack
-- `player_lance_attack`: Defensive attack with evasion buff
+- `player_spear_attack`: Defensive attack with evasion buff
+- `player_use_estus`: Consumable healing item (immediate + regen)
+- `apply_estus_regen`: Handles round-by-round regeneration
 - `monster_turn`: Checks dragon stun, then dragon AI attack selection
-- `dragon_can_act`: Dragon attack AI (Fire Breath, Stomp, or Fly)
+- `dragon_can_act`: Dragon attack AI (Fire Breath, Stomp, Fly, or Inferno)
 - `dragon_stomp`: Stuns player and reduces debt by 5%
 - `dragon_fly`: Increases dragon evasion for next turn
+- `dragon_inferno`: High damage fire attack, reduces debt by 5%
 - `calculate_attack_damage`: Player normal attack with evasion check
 - `calculate_flank_damage`: Flank attack damage calculation
-- `calculate_lance_damage`: Lance attack damage calculation
+- `calculate_spear_damage`: Spear attack damage calculation
 - `calculate_dragon_damage`: Dragon fire breath with player evasion check
 - `apply_compound_interest`: Applies 10% interest + 100 base to debt counter
 - `apply_compound_interest_direct`: Custom interest calculation with parameters
@@ -281,7 +295,9 @@ turn:           0      # 0=Player, 1=Monster
 playerStunned:  0      # 0=Normal, 1=Stunned (from Stomp)
 dragonStunned:  0      # 0=Normal, 1=Stunned (from Sword)
 dragonFlying:   0      # 0=Ground, 1=Flying (evasion buff)
-playerEvasion:  0      # 0=Normal, 1=Evasion (from Lance)
+playerEvasion:  0      # 0=Normal, 1=Evasion (from Spear)
+estusFlaskCount: 2     # Charges of Estus Flask
+estusFlaskActive: 0    # Current status of regeneration
 interestRate:   10     # 10% compound interest
 baseDamage:     100    # Base amount added per compound interest
 ```
@@ -293,8 +309,9 @@ baseDamage:     100    # Base amount added per compound interest
 3. **Player Actions**: 5 distinct abilities with different risk/reward profiles
 4. **Sword Ability**: No HP damage but guarantees compound interest and stuns dragon
 5. **Flank Ability**: High-risk high-reward with 40% critical chance and increased damage
-6. **Lance Ability**: Defensive option with reduced damage but grants evasion buff
-7. **Quiz Ability**: 6 educational questions about computer architecture and hardware
+6. **Spear Ability**: Defensive option with reduced damage but grants evasion buff
+7. **Estus Flask**: Consumable healing item with progressive restoration over 3 rounds
+8. **Quiz Ability**: 6 educational questions about computer architecture and hardware
    - Random selection from unanswered questions
    - 5x compound interest on correct answers
    - -5 HP penalty on wrong answers
