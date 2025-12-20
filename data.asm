@@ -27,6 +27,7 @@
     dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
     playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Spear ability)
     spear_attack_active: .word 0      # 0 = normal, 1 = spear animation in progress
+    spearX:              .word 0      # X position of spear during animation
     
     # Consumable Items - Estus Flask (Dark Souls Reference)
     estusFlaskCount: .word 2          # Number of Estus Flasks available (limited resource)

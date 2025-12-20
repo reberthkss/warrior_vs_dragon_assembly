@@ -24,6 +24,10 @@ render_all:
     lw $t0, playerHP
     blez $t0, draw_player_defeated
     
+    # Check if spear animation is active
+    lw $t0, spear_attack_active
+    bnez $t0, draw_warrior_spear_pose
+
     # Normal standing warrior
     li $a0, 50             # X
     li $a1, 185            # Y
@@ -31,6 +35,19 @@ render_all:
     jal draw_sprite_pro
     j done_draw_player
     
+    draw_warrior_spear_pose:
+    li $a0, 50             # X
+    li $a1, 185            # Y
+    la $a2, warrior_spear
+    jal draw_sprite_pro
+    
+    # Also draw the flying spear if animation is active
+    lw $a0, spearX
+    li $a1, 175             # Height of the spear throw (adjusted -100px)
+    la $a2, spear
+    jal draw_sprite_pro
+    j done_draw_player
+
     draw_player_defeated:
     # Draw player lying on the ground using defeated sprite
     li $a0, 30             # X - slightly to the left

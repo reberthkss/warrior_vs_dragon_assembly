@@ -146,6 +146,38 @@ player_lance_attack:
     la $a0, msg_player_spear
     syscall
 
+    # --- SPEAR ANIMATION ---
+    li $t0, 1
+    sw $t0, spear_attack_active
+    li $t0, 60             # Start spear slightly ahead of warrior
+    sw $t0, spearX
+    
+spear_anim_loop:
+    # Save $ra as we are calling another function
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    jal render_all
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
+    # Advance spear
+    lw $t0, spearX
+    addi $t0, $t0, 10      # Animation speed
+    sw $t0, spearX
+    
+    # Small delay for smoothness
+    li $v0, 32
+    li $a0, 10             # 10ms delay
+    syscall
+    
+    # Check if reached dragon (X=180)
+    lw $t0, spearX
+    blt $t0, 180, spear_anim_loop
+    
+    # Reset animation state
+    sw $zero, spear_attack_active
+    # --- END ANIMATION ---
+
     # Check if dragon is flying (increased evasion)
     lw $t0, dragonFlying
     move $a0, $t0
