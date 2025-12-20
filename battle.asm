@@ -143,7 +143,7 @@ player_flank_attack:
 player_lance_attack:
     # Lance ability - defensive, increases evasion, lower damage
     li $v0, 4
-    la $a0, msg_player_lance
+    la $a0, msg_player_spear
     syscall
 
     # Check if dragon is flying (increased evasion)
@@ -151,18 +151,18 @@ player_lance_attack:
     move $a0, $t0
     jal calculate_lance_damage
     move $s0, $v0
-    
+
     # Reset dragon flying status after attack
     sw $zero, dragonFlying
     # Increase player evasion (NOT reset this turn)
     li $t0, 1
     sw $t0, playerEvasion
-    
+
     # Reduce Monster HP
     lw $t1, monsterHP
     sub $t1, $t1, $s0
     sw $t1, monsterHP
-    
+
     # Apply Compound Interest on Debt Counter (only if attack hit)
     blez $s0, skip_debt_lance
     jal apply_compound_interest
@@ -170,7 +170,7 @@ player_lance_attack:
 
     li $t0, 1
     sw $t0, turn
-    
+
     li $v0, 32
     li $a0, 500
     syscall

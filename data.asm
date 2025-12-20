@@ -25,7 +25,8 @@
     playerStunned:  .word 0           # 0 = Not stunned, 1 = Stunned
     dragonFlying:   .word 0           # 0 = On ground, 1 = Flying (increased evasion)
     dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
-    playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Lance ability)
+    playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Spear ability)
+    spear_attack_active: .word 0      # 0 = normal, 1 = spear animation in progress
     
     # Consumable Items - Estus Flask (Dark Souls Reference)
     estusFlaskCount: .word 2          # Number of Estus Flasks available (limited resource)
@@ -98,7 +99,7 @@
     msg_player_sword:.asciiz "\n>>> [PLAYER] You used SWORD!\n"
     msg_player_sword_success:.asciiz."\n*** The dragon is STUNNED! ***\n"
     msg_player_flank:.asciiz "\n>>> [PLAYER] You used FLANK! "
-    msg_player_lance:.asciiz "\n>>> [PLAYER] You used LANCE! Your evasion is increased!\n"
+    msg_player_spear:.asciiz "\n>>> [PLAYER] You used SPEAR! Your evasion is increased!\n"
     msg_player_quiz:.asciiz "\n*** --- AOC QUIZ TIME! --- ***\n"
     msg_quiz_remaining:.asciiz "[?] Questoes restantes: "
     msg_quiz_prompt:.asciiz ">>> Your answer (1-4): "
@@ -115,7 +116,7 @@
     msg_damage:     .asciiz ">> Damage dealt: "
     msg_miss:       .asciiz "-- ATTACK MISSED! --\n"
     msg_crit:       .asciiz "*** CRITICAL HIT!!! *** "
-    msg_choose_action: .asciiz "\n[PLAYER] Choose: (1)Attack (2)Sword (3)Flank (4)Lance (5)Quiz (6)Estus - "
+    msg_choose_action: .asciiz "\n[PLAYER] Choose: (1)Attack (2)Sword (3)Flank (4)Spear (5)Quiz (6)Estus - "
     msg_win:        .asciiz "\n*** VICTORY! - Dragon Defeated! ***\n"
     msg_lose:       .asciiz "\n*** DEFEAT... ***\n"
     msg_win_debt:   .asciiz "\n*** VICTORY BY COMPOUND INTEREST! Debt reached 10,000! ***\n"
