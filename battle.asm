@@ -164,16 +164,19 @@ spear_anim_loop:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
     
-    # 1. Erase the spear at its CURRENT position
-    jal erase_spear_unit
+    # Save old X to erase trail later
+    lw $s1, spearX
     
-    # 2. Advance spear
-    lw $t0, spearX
-    addi $t0, $t0, 10      # Animation speed
+    # 1. Advance spear position
+    addi $t0, $s1, 10      # Animation speed
     sw $t0, spearX
     
-    # 3. Redraw characters (warrior pose, new spear position, dragon)
+    # 2. Redraw characters (draws spear at NEW position)
     jal render_characters
+    
+    # 3. Erase the TRAIL left behind at OLD position
+    move $a0, $s1
+    jal erase_spear_trail
     
     lw $ra, 0($sp)
     addi $sp, $sp, 4

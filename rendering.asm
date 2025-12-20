@@ -206,26 +206,27 @@ draw_turn_cursor:
     jr $ra
 
 # ----------------------------------------------------------------
-# OPTIMIZATION: ERASE SPEAR UNIT (Selective Redraw)
+# OPTIMIZATION: ERASE SPEAR TRAIL
 # ----------------------------------------------------------------
-erase_spear_unit:
+erase_spear_trail:
+    # $a0 = X position to erase (usually oldX)
     addi $sp, $sp, -4
     sw $ra, 0($sp)
     
-    # Spear dimensions are 48x47. Starting Y=175.
-    # Sky ends at Y=200. Ground starts at Y=200.
-    
-    lw $a0, spearX         # X
-    li $a1, 175            # Y start
-    li $a2, 48             # Width
-    li $v1, 25             # Height (175 to 200 = 25 pixels of Sky)
+    # Erase 10 pixel strip (matching animation speed)
+    # Sky part
+    move $t0, $a0
+    li $a1, 175
+    li $a2, 10
+    li $v1, 25
     lw $a3, COLOR_SKY
     jal func_draw_rect
     
-    lw $a0, spearX         # X
-    li $a1, 200            # Y start (Ground)
-    li $a2, 48             # Width
-    li $v1, 22             # Height (200 to 222 = 22 pixels of Ground)
+    # Ground part
+    move $a0, $t0
+    li $a1, 200
+    li $a2, 10
+    li $v1, 22
     lw $a3, COLOR_GROUND
     jal func_draw_rect
     
