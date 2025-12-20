@@ -9,33 +9,75 @@
 # ----------------------------------------------------------------
 # MAIN RENDERING FUNCTION
 # ----------------------------------------------------------------
+# ----------------------------------------------------------------
+# MODULAR RENDERING FUNCTIONS
+# ----------------------------------------------------------------
+
 render_all:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
 
-    # 1. Clear Screen
-    # Sky: occupies top to line 200 (of 256)
-    draw_rectangle(0, 0, 256, 200, COLOR_SKY)
-    # Ground: line 200 to 256
-    draw_rectangle(0, 200, 256, 56, COLOR_GROUND)
+    jal render_background
+    jal render_characters
+    jal render_ui
 
-    # 2. Draw Warrior
-    # Check if player is defeated to draw lying down
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+render_background:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    # Sky: occupies top to line 200 (of 256)
+    draw_rectangle 0, 0, 256, 200, COLOR_SKY
+    # Ground: line 200 to 256
+    draw_rectangle 0, 200, 256, 56, COLOR_GROUND
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+render_characters:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    jal draw_player_unit
+    jal draw_dragon_unit
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+render_ui:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    jal draw_hp_bars
+    jal draw_turn_cursor
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+# ----------------------------------------------------------------
+# UNIT-SPECIFIC DRAWING FUNCTIONS
+# ----------------------------------------------------------------
+
+draw_player_unit:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    # Check if player is defeated
     lw $t0, playerHP
-    blez $t0, draw_player_defeated
+    blez $t0, player_unit_defeated
     
     # Check if spear animation is active
     lw $t0, spear_attack_active
-    bnez $t0, draw_warrior_spear_pose
+    bnez $t0, player_unit_spear_pose
 
     # Normal standing warrior
     li $a0, 50             # X
     li $a1, 185            # Y
     la $a2, sprite_player
     jal draw_sprite_pro
-    j done_draw_player
+    j done_player_unit
     
-    draw_warrior_spear_pose:
+    player_unit_spear_pose:
     li $a0, 50             # X
     li $a1, 185            # Y
     la $a2, warrior_spear
@@ -43,107 +85,150 @@ render_all:
     
     # Also draw the flying spear if animation is active
     lw $a0, spearX
-    li $a1, 175             # Height of the spear throw (adjusted -100px)
+    li $a1, 175            # Height of the spear throw
     la $a2, spear
     jal draw_sprite_pro
-    j done_draw_player
+    j done_player_unit
 
-    draw_player_defeated:
-    # Draw player lying on the ground using defeated sprite
-    li $a0, 30             # X - slightly to the left
-    li $a1, 195            # Y - on the ground
+    player_unit_defeated:
+    li $a0, 30             # X
+    li $a1, 195            # Y
     la $a2, sprite_player_defeated
     jal draw_sprite_pro
     
-    done_draw_player:
+    done_player_unit:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
 
-    # 3. Draw Dragon
+draw_dragon_unit:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
     # Check if dragon is defeated
     lw $t0, monsterHP
-    blez $t0, draw_dragon_defeated
+    blez $t0, dragon_unit_defeated
     
-    # Check if dragon is flying to adjust Y position
+    # Check if dragon is flying
     lw $t0, dragonFlying
     li $a0, 180            # X
-    beqz $t0, dragon_on_ground
-    li $a1, 140            # Y when flying (higher in the sky)
-    j draw_dragon_sprite
-    dragon_on_ground:
+    beqz $t0, dragon_unit_on_ground
+    li $a1, 140            # Y when flying
+    j do_draw_dragon
+    
+    dragon_unit_on_ground:
     li $a1, 185            # Y when on ground
-    draw_dragon_sprite:
+    
+    do_draw_dragon:
     la $a2, sprite_dragon
     jal draw_sprite_pro
-    j done_draw_dragon
+    j done_dragon_unit
     
-    draw_dragon_defeated:
-    # Draw defeated dragon on the ground
-    li $a0, 140            # X - centered
-    li $a1, 175            # Y - on ground
+    dragon_unit_defeated:
+    li $a0, 140            # X
+    li $a1, 175            # Y
     la $a2, sprite_dragon_defeated
     jal draw_sprite_pro
     
-    done_draw_dragon:
+    done_dragon_unit:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
 
-    # 4. Health Bars
-    # Player Bar (100 HP max = 50 pixels max)
+draw_hp_bars:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    # Player Bar
     lw $t0, playerHP
-    blez $t0, player_hp_defeated
-    div $t0, $t0, 2     # Scale (100 HP = 50 pixels)
+    blez $t0, hb_player_defeated
+    div $t0, $t0, 2     # Scale
     mflo $a2
-    blez $a2, player_hp_defeated
+    blez $a2, hb_player_defeated
     li $a0, 50
     li $a1, 175
-    li $v1, 4           # Height 4 pixels
-    lw $a3, COLOR_HP_FULL   # Green when alive
-    jal func_draw_rect
-    j skip_hp_player
-    
-    player_hp_defeated:
-    # Draw red bar when player is defeated
-    li $a0, 50
-    li $a1, 175
-    li $a2, 5           # Minimum bar width to show defeat
-    li $v1, 4           # Height 4 pixels
-    lw $a3, COLOR_HP_DMG    # Red when defeated
-    jal func_draw_rect
-    
-    skip_hp_player:
-
-    # Dragon Bar
-    lw $t0, monsterHP
-    blez $t0, skip_hp_monster
-    div $t0, $t0, 20    # Scale (1000 HP = 50 pixels)
-    mflo $a2
-    blez $a2, skip_hp_monster
-    li $a0, 180
-    # Check if dragon is flying to adjust HP bar Y position
-    lw $t1, dragonFlying
-    beqz $t1, dragon_hp_ground
-    li $a1, 130            # Y when flying (higher)
-    j draw_dragon_hp
-    dragon_hp_ground:
-    li $a1, 175            # Y when on ground
-    draw_dragon_hp:
     li $v1, 4
     lw $a3, COLOR_HP_FULL
     jal func_draw_rect
-    skip_hp_monster:
-
-    # 5. Cursor
-    lw $t0, turn
-    beq $t0, 1, cursor_dragon
-    draw_rectangle(60, 160, 10, 5, COLOR_CURSOR) # Near player
-    j end_render
-    cursor_dragon:
-    # Check if dragon is flying to adjust cursor Y position
+    j draw_hb_dragon
+    
+    hb_player_defeated:
+    li $a0, 50
+    li $a1, 175
+    li $a2, 5
+    li $v1, 4
+    lw $a3, COLOR_HP_DMG
+    jal func_draw_rect
+    
+    draw_hb_dragon:
+    lw $t0, monsterHP
+    blez $t0, done_hp_bars
+    div $t0, $t0, 20    # Scale
+    mflo $a2
+    blez $a2, done_hp_bars
+    li $a0, 180
     lw $t1, dragonFlying
-    beqz $t1, cursor_dragon_ground
-    draw_rectangle(190, 115, 10, 5, COLOR_CURSOR) # Near flying dragon
-    j end_render
-    cursor_dragon_ground:
-    draw_rectangle(190, 160, 10, 5, COLOR_CURSOR) # Near dragon on ground
+    beqz $t1, hb_dragon_ground
+    li $a1, 130
+    j do_draw_hb_dragon
+    hb_dragon_ground:
+    li $a1, 175
+    do_draw_hb_dragon:
+    li $v1, 4
+    lw $a3, COLOR_HP_FULL
+    jal func_draw_rect
+    
+    done_hp_bars:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
 
-end_render:
+draw_turn_cursor:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    lw $t0, turn
+    beq $t0, 1, dtc_dragon
+    draw_rectangle 60, 160, 10, 5, COLOR_CURSOR
+    j done_turn_cursor
+    
+    dtc_dragon:
+    lw $t1, dragonFlying
+    beqz $t1, dtc_dragon_ground
+    draw_rectangle 190, 115, 10, 5, COLOR_CURSOR
+    j done_turn_cursor
+    dtc_dragon_ground:
+    draw_rectangle 190, 160, 10, 5, COLOR_CURSOR
+    
+    done_turn_cursor:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+# ----------------------------------------------------------------
+# OPTIMIZATION: ERASE SPEAR UNIT (Selective Redraw)
+# ----------------------------------------------------------------
+erase_spear_unit:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    # Spear dimensions are 48x47. Starting Y=175.
+    # Sky ends at Y=200. Ground starts at Y=200.
+    
+    lw $a0, spearX         # X
+    li $a1, 175            # Y start
+    li $a2, 48             # Width
+    li $v1, 25             # Height (175 to 200 = 25 pixels of Sky)
+    lw $a3, COLOR_SKY
+    jal func_draw_rect
+    
+    lw $a0, spearX         # X
+    li $a1, 200            # Y start (Ground)
+    li $a2, 48             # Width
+    li $v1, 22             # Height (200 to 222 = 22 pixels of Ground)
+    lw $a3, COLOR_GROUND
+    jal func_draw_rect
+    
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra

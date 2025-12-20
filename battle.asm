@@ -152,22 +152,35 @@ player_lance_attack:
     li $t0, 60             # Start spear slightly ahead of warrior
     sw $t0, spearX
     
-spear_anim_loop:
-    # Save $ra as we are calling another function
+    # Initial full render to set the stage
     addi $sp, $sp, -4
     sw $ra, 0($sp)
     jal render_all
     lw $ra, 0($sp)
     addi $sp, $sp, 4
+
+spear_anim_loop:
+    # Save $ra as we are calling another function
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
     
-    # Advance spear
+    # 1. Erase the spear at its CURRENT position
+    jal erase_spear_unit
+    
+    # 2. Advance spear
     lw $t0, spearX
     addi $t0, $t0, 10      # Animation speed
     sw $t0, spearX
     
+    # 3. Redraw characters (warrior pose, new spear position, dragon)
+    jal render_characters
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
     # Small delay for smoothness
     li $v0, 32
-    li $a0, 10             # 10ms delay
+    li $a0, 10             # Fast animation
     syscall
     
     # Check if reached dragon (X=180)
