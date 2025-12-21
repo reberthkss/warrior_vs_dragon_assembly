@@ -29,6 +29,10 @@
     spear_attack_active: .word 0      # 0 = normal, 1 = spear animation in progress
     spearX:              .word 0      # X position of spear during animation
     
+    fireball_attack_active: .word 0   # 0 = normal, 1 = fireball animation in progress
+    fireballX:              .word 0   # X position of fireball
+    fireballY:              .word 0   # Y position of fireball
+    
     # Consumable Items - Estus Flask (Dark Souls Reference)
     estusFlaskCount: .word 2          # Number of Estus Flasks available (limited resource)
     estusFlaskHeal:  .word 25         # HP restored per flask (balanced with dragon damage)

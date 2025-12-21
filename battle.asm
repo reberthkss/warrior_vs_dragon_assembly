@@ -271,6 +271,9 @@ dragon_can_act:
     la $a0, msg_monster_atk
     syscall
 
+    # Trigger Fireball Animation
+    jal dragon_fireball_animation
+
     # Check player evasion
     lw $a0, playerEvasion
     jal calculate_dragon_damage
@@ -342,6 +345,9 @@ dragon_inferno:
     move $t0, $a0
     
     blt $t0, 20, inferno_missed  # 20% miss chance
+    
+    # Trigger Fireball Animation
+    jal dragon_fireball_animation
     
     # Inferno always deals 45-65 damage (higher than normal attacks)
     li $v0, 42
@@ -739,4 +745,54 @@ apply_estus_regen:
     sw $zero, estusFlaskCounter
     
     estus_regen_end:
+    jr $ra
+
+# ----------------------------------------------------------------
+# DRAGON ANIMATION FUNCTIONS
+# ----------------------------------------------------------------
+dragon_fireball_animation:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    # 1. Start Animation State
+    li $t1, 1
+    sw $t1, fireball_attack_active
+    li $t1, 180            # Initial fireball X (aligned with dragon which is at 180)
+    sw $t1, fireballX
+    
+    # Initial render to show dragon in inferno (attacking) pose
+    jal render_all
+    
+    dfa_loop:
+        lw $t0, fireballX
+        ble $t0, 50, dfa_done  # Target: player at 50
+        
+        # Save current X as oldX
+        move $s1, $t0
+        
+        # Advance fireball (move left)
+        subi $t0, $t0, 10
+        sw $t0, fireballX
+        
+        # Draw new state (characters)
+        jal render_characters
+        
+        # Erase trail (selective erasure)
+        move $a0, $s1
+        jal erase_fireball_trail
+        
+        # Delay (10ms)
+        li $a0, 10
+        li $v0, 32
+        syscall
+        
+        j dfa_loop
+        
+    dfa_done:
+    li $t1, 0
+    sw $t1, fireball_attack_active
+    jal render_all         # Restore normal pose and scene
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
     jr $ra

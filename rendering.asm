@@ -109,6 +109,10 @@ draw_dragon_unit:
     lw $t0, monsterHP
     blez $t0, dragon_unit_defeated
     
+    # Check if fireball animation is active (Dragon Inferno Pose)
+    lw $t0, fireball_attack_active
+    bnez $t0, dragon_unit_inferno_pose
+
     # Check if dragon is flying
     lw $t0, dragonFlying
     li $a0, 180            # X
@@ -124,6 +128,19 @@ draw_dragon_unit:
     jal draw_sprite_pro
     j done_dragon_unit
     
+    dragon_unit_inferno_pose:
+    li $a0, 180            # X - Same as normal dragon (64x34)
+    li $a1, 185            # Y - Same as normal dragon
+    la $a2, sprite_dragon_inferno
+    jal draw_sprite_pro
+    
+    # Also draw the fireball if animation is active
+    lw $a0, fireballX
+    li $a1, 175            # Height of the fireball
+    la $a2, fireball
+    jal draw_sprite_pro
+    j done_dragon_unit
+
     dragon_unit_defeated:
     li $a0, 140            # X
     li $a1, 175            # Y
@@ -227,6 +244,36 @@ erase_spear_trail:
     li $a1, 200
     li $a2, 10
     li $v1, 22
+    lw $a3, COLOR_GROUND
+    jal func_draw_rect
+    
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+# ----------------------------------------------------------------
+# OPTIMIZATION: ERASE FIREBALL TRAIL (moves Right to Left)
+# ----------------------------------------------------------------
+erase_fireball_trail:
+    # $a0 = old X position to erase (erases the strip at X + 64)
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    
+    addi $t0, $a0, 64      # Erase at the trailing edge (Right side)
+    
+    # Sky part (Y: 175 to 200)
+    move $a0, $t0
+    li $a1, 175
+    li $a2, 10             # Erasure width matching speed
+    li $v1, 25
+    lw $a3, COLOR_SKY
+    jal func_draw_rect
+    
+    # Ground part (Y: 200 to 209)
+    move $a0, $t0
+    li $a1, 200
+    li $a2, 10
+    li $v1, 9              # 34 total height - 25 sky = 9 ground
     lw $a3, COLOR_GROUND
     jal func_draw_rect
     

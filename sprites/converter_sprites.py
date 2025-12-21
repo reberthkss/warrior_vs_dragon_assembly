@@ -7,14 +7,16 @@ ASSETS = [
     # WARRIOR SPRITES
     # ("warrior.png", "sprite_player", 48),   # Guerreiro: Pequeno (48px)
     # ("warrior_defeated.png", "sprite_player_defeated", 48),   # Guerreiro: Pequeno (48px)
-    # ("warrior_spear.png",    "warrior_spear", 48),   # Dragão: GIGANTE (110px)
-    # ("spear.png",    "spear", 48),   # Dragão: GIGANTE (110px)
+    # ("warrior_spear.png",    "warrior_spear", 48),   
+    # ("spear.png",    "spear", 48),   
 
     
     
     # DRAGON SRPITEES
     # ("dragon.png",    "sprite_dragon", 110)   # Dragão: GIGANTE (110px)
     # ("dragon_defeated.png",    "sprite_dragon_defeated", 110),   # Dragão: GIGANTE (110px)
+    ("dragon_fireball.png",    "sprite_dragon_fireball", 48),   # Dragão: GIGANTE (110px)
+    # ("fireball.png",    "fireball", 48),   # Dragão: GIGANTE (110px)
 
 ]
 # --------------------------------
