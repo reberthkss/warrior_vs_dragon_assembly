@@ -17,7 +17,7 @@ ASSETS = [
     # ("dragon_fireball.png",    "sprite_dragon_fireball", 48),   
     # ("fireball.png",    "fireball", 48),   
     # ("sprite_dragon_preparing_inferno.png",    "sprite_dragon_preparing_inferno", 48),   
-    ("dragon_defense.png",    "sprite_dragon_defense", 110),   
+    ("dragon_defense.png",    "sprite_dragon_defense", 48),   
 
 
 ]

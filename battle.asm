@@ -301,6 +301,9 @@ monster_turn:
     j game_loop
 
 dragon_can_act:
+    # Reset defense stance when dragon attacks
+    sw $zero, dragonDefense
+    
     # Check if dragon is preparing Inferno
     lw $t0, dragonPreparingInferno
     bnez $t0, dragon_inferno_unleash
@@ -357,10 +360,14 @@ try_dragon_inferno:
     j dragon_inferno_prep
 
 dragon_skip_no_stamina:
-    # Dragon has no stamina for any attack, skip turn
+    # Dragon has no stamina for any attack, enter defense stance
     li $v0, 4
     la $a0, msg_dragon_skip
     syscall
+    
+    # Set dragon to defense stance
+    li $t0, 1
+    sw $t0, dragonDefense
     
     li $t0, 0
     sw $t0, turn

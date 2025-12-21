@@ -129,6 +129,10 @@ draw_dragon_unit:
     # Check if dragon is preparing Inferno
     lw $t0, dragonPreparingInferno
     bnez $t0, dragon_unit_prep_pose
+    
+    # Check if dragon is in defense stance
+    lw $t0, dragonDefense
+    bnez $t0, dragon_unit_defense_pose
 
     # Check if dragon is flying
     lw $t0, dragonFlying
@@ -142,6 +146,13 @@ draw_dragon_unit:
     
     do_draw_dragon:
     la $a2, sprite_dragon
+    jal draw_sprite_pro
+    j done_dragon_unit
+    
+    dragon_unit_defense_pose:
+    li $a0, 180            # X
+    li $a1, 185            # Y
+    la $a2, sprite_dragon_defense
     jal draw_sprite_pro
     j done_dragon_unit
     

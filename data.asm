@@ -26,6 +26,7 @@
     playerStunned:  .word 0           # 0 = Not stunned, 1 = Stunned
     dragonFlying:   .word 0           # 0 = On ground, 1 = Flying (increased evasion)
     dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
+    dragonDefense:  .word 0           # 0 = Normal, 1 = Defense stance (reduces damage taken)
     playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Spear ability)
     warriorShield:  .word 0           # Shield absorption HP (e.g., 50)
     
