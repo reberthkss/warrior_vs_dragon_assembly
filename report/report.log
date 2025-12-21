@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.12)  18 DEC 2025 21:08
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.12)  21 DEC 2025 12:19
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -325,6 +325,21 @@ Overfull \hbox (34.23459pt too wide) in paragraph at lines 38--39
  []
 
 
+Overfull \hbox (23.01024pt too wide) in paragraph at lines 42--43
+\OT1/cmr/m/n/12 cudo), \OT1/cmtt/m/n/12 warrior[]spear \OT1/cmr/m/n/12 (guer-reiro lan^^Xcando lan^^Xca), \OT1/cmtt/m/n/12 spear \OT1/cmr/m/n/12 (proj^^Setil lan^^Xca), \OT1/cmtt/m/n/12 sprite[]dragon
+ []
+
+
+Overfull \hbox (25.17659pt too wide) in paragraph at lines 42--43
+\OT1/cmr/m/n/12 (drag~ao padr~ao), \OT1/cmtt/m/n/12 sprite[]dragon[]defeated \OT1/cmr/m/n/12 (drag~ao der-ro-tado), \OT1/cmtt/m/n/12 sprite[]dragon[]inferno
+ []
+
+
+Overfull \hbox (6.67416pt too wide) in paragraph at lines 42--43
+\OT1/cmr/m/n/12 In-ferno), \OT1/cmtt/m/n/12 sprite[]dragon[]defense \OT1/cmr/m/n/12 (drag~ao em pos-tura de-fen-siva) e \OT1/cmtt/m/n/12 fireball \OT1/cmr/m/n/12 (proj^^Setil
+ []
+
+
 Overfull \hbox (48.37909pt too wide) in paragraph at lines 46--47
 \OT1/cmr/m/n/12 Para fa-ci-li-tar a cria^^Xc~ao de spri-tes, foi de-sen-vol-vido o script Python \OT1/cmtt/m/n/12 sprites/converter[]sprites.py
  []
@@ -334,7 +349,14 @@ Overfull \hbox (48.37909pt too wide) in paragraph at lines 46--47
 [3{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
 
 [4]
-Overfull \hbox (6.9358pt too wide) in paragraph at lines 112--125
+
+[5]
+Overfull \hbox (12.09454pt too wide) in paragraph at lines 117--136
+ [][] 
+ []
+
+
+Overfull \hbox (6.78767pt too wide) in paragraph at lines 150--165
  [][] 
  []
 
@@ -343,38 +365,33 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 
 
 
-[5]
-Overfull \hbox (42.3448pt too wide) in paragraph at lines 138--151
- [][] 
- []
-
-
-
 [6]
 
 [7]
 
-[8] (./report.aux)
+[8]
+
+[9] (./report.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 675C71306F65EE6FE7B8F407E49C60B0;2941.
+(rerunfilecheck)             Checksum: BC1629F7E72E39B42673BF6EC455A9B7;3232.
  ) 
 Here is how much of TeX's memory you used:
- 11523 strings out of 473190
- 180968 string characters out of 5715799
- 608020 words of memory out of 5000000
- 34626 multiletter control sequences out of 15000+600000
+ 11522 strings out of 473190
+ 180930 string characters out of 5715799
+ 611020 words of memory out of 5000000
+ 34622 multiletter control sequences out of 15000+600000
  565466 words of font info for 58 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,9n,79p,857b,527s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,9n,79p,982b,542s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on report.pdf (8 pages, 150207 bytes).
+Output written on report.pdf (9 pages, 153961 bytes).
 PDF statistics:
- 201 PDF objects out of 1000 (max. 8388607)
- 169 compressed objects within 2 object streams
- 36 named destinations out of 1000 (max. 500000)
- 145 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 214 PDF objects out of 1000 (max. 8388607)
+ 181 compressed objects within 2 object streams
+ 39 named destinations out of 1000 (max. 500000)
+ 153 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -147,7 +147,7 @@
     msg_damage:     .asciiz ">> Damage dealt: "
     msg_miss:       .asciiz "-- ATTACK MISSED! --\n"
     msg_crit:       .asciiz "*** CRITICAL HIT!!! *** "
-    msg_choose_action: .asciiz "\n[PLAYER] Choose: (0)Skip (1)Shield (2)Sword (3)Flank (4)Spear (5)Quiz (6)Estus - "
+    msg_choose_action: .asciiz "\n[PLAYER] Choose: (0)Skip (1)Shield (2)Sword (3)Flank (4)Spear (5)Arcano (6)Estus - "
     msg_player_skip: .asciiz "\n>>> [PLAYER] You take a moment to catch your breath...\n"
     msg_dragon_skip: .asciiz "\n<<< [DRAGON] The dragon hesitates and watches carefully...\n"
     msg_player_shield: .asciiz "\n>>> [PLAYER] You prepared your shield! (50 HP Absorption)\n"

@@ -37,9 +37,9 @@ O projeto segue uma arquitetura modular para garantir a manutenibilidade e organ
     \item \textbf{data.asm}: Serve como o repositório central para todas as variáveis de estado do jogo (HP, dívida, contadores de turno), constantes (cores, endereços de memória) e strings de texto (mensagens de UI, perguntas do quiz).
     \item \textbf{macros.asm}: Define macros globais reutilizáveis em todo o projeto, como \texttt{draw\_rectangle} que encapsula a chamada à função de desenho de retângulos, simplificando o código de renderização.
     \item \textbf{battle.asm}: Contém a lógica central de combate. Implementa as funções para os ataques do jogador, comportamento da IA do dragão, cálculos de dano e os algoritmos de juros compostos.
-    \item \textbf{quiz.asm}: Implementa um sub-sistema educacional. Gerencia a habilidade ``Quiz'', lidando com a seleção de perguntas, validação de respostas e aplicação de recompensas especiais por respostas corretas.
-    \item \textbf{rendering.asm}: O motor gráfico. Lida com escritas diretas no display mapeado em memória (0x10040000) para renderizar o céu, chão, sprites (Guerreiro e Dragão) e barras de HP dinâmicas.
-    \item \textbf{sprites.asm}: Armazena os dados gráficos dos personagens do jogo. Cada sprite é definido com um cabeçalho contendo largura e altura, seguido pelos valores de cor RGBA de cada pixel. Inclui quatro sprites principais: \texttt{sprite\_player} (guerreiro em pé, 64x34 pixels), \texttt{sprite\_player\_defeated} (guerreiro derrotado deitado, 48x32 pixels), \texttt{sprite\_dragon} (dragão padrão, 64x34 pixels) e \texttt{sprite\_dragon\_defeated} (dragão derrotado, 110x73 pixels). A cor 0x00000000 é tratada como transparente pelo motor de renderização.
+    \item \textbf{quiz.asm}: Implementa um sub-sistema educacional. Gerencia a habilidade ``Conhecimento Arcano'', lidando com a seleção de perguntas, validação de respostas e aplicação de recompensas especiais por respostas corretas.
+    \item \textbf{rendering.asm}: O motor gráfico modular. Lida com escritas diretas no display mapeado em memória (0x10040000) para renderizar o céu, chão, sprites (Guerreiro e Dragão), barras de HP e barras de stamina. Inclui funções separadas para renderização de fundo, personagens e interface.
+    \item \textbf{sprites.asm}: Armazena os dados gráficos dos personagens do jogo. Cada sprite é definido com um cabeçalho contendo largura e altura, seguido pelos valores de cor RGBA de cada pixel. Inclui onze sprites: \texttt{sprite\_player} (guerreiro em pé), \texttt{sprite\_player\_defeated} (guerreiro derrotado), \texttt{warrior\_shield} (guerreiro com escudo), \texttt{warrior\_spear} (guerreiro lançando lança), \texttt{spear} (projétil lança), \texttt{sprite\_dragon} (dragão padrão), \texttt{sprite\_dragon\_defeated} (dragão derrotado), \texttt{sprite\_dragon\_inferno} (dragão cuspindo fogo), \texttt{sprite\_dragon\_preparing\_inferno} (dragão preparando Inferno), \texttt{sprite\_dragon\_defense} (dragão em postura defensiva) e \texttt{fireball} (projétil bola de fogo). A cor 0x00000000 é tratada como transparente pelo motor de renderização.
 \end{itemize}
 
 \subsection{Geração de Sprites}
@@ -53,20 +53,23 @@ O jogo apresenta dois personagens principais em um confronto épico:
 O protagonista é um guerreiro medieval controlado pelo jogador. Ele possui:
 \begin{itemize}
     \item \textbf{HP Inicial}: 100 pontos de vida
+    \item \textbf{Stamina Inicial}: 100 pontos (regenera 15 por turno)
     \item \textbf{Posição no Display}: Lado esquerdo da tela (X=50, Y=185)
-    \item \textbf{Sprite}: 64x34 pixels, com versão alternativa para estado de derrota (48x32 pixels, deitado no chão)
+    \item \textbf{Sprites}: Múltiplas poses incluindo postura normal, com escudo, lançando lança e derrotado
     \item \textbf{Recursos}: 2 Estus Flasks para recuperação de HP
-    \item \textbf{Habilidades}: 6 ações disponíveis (Ataque Normal, Espada, Flanco, Lança, Quiz e Estus Flask)
+    \item \textbf{Habilidades}: 7 ações disponíveis (Pular Turno, Escudo, Espada, Flanco, Lança, Conhecimento Arcano e Estus Flask)
 \end{itemize}
 
 \subsection{O Dragão (Inimigo)}
 O antagonista é um poderoso dragão controlado pela IA do jogo. Ele possui:
 \begin{itemize}
     \item \textbf{HP Inicial}: 1000 pontos de vida (compensando sua baixa taxa de acerto)
+    \item \textbf{Stamina Inicial}: 100 pontos (regenera 15 por turno)
     \item \textbf{Posição no Display}: Lado direito da tela (X=180, Y=185), podendo voar para Y=140
-    \item \textbf{Sprite}: 64x34 pixels normalmente, com versão de derrota maior (110x73 pixels)
-    \item \textbf{Comportamento}: Seleção aleatória entre 4 ataques (25\% cada)
-    \item \textbf{Ataques}: Sopro de Fogo, Pisar (Stomp), Voar (Fly) e Inferno
+    \item \textbf{Sprites}: Múltiplas poses incluindo postura normal, voando, cuspindo fogo, preparando Inferno, em defesa e derrotado
+    \item \textbf{Comportamento}: Seleção aleatória entre 4 ataques (25\% cada), com validação de stamina
+    \item \textbf{Ataques}: Sopro de Fogo (20 stamina), Pisar (30 stamina), Voar (25 stamina) e Inferno (50 stamina)
+    \item \textbf{Fallback}: Quando sem stamina suficiente, entra em postura de defesa
 \end{itemize}
 
 \section{Mecânicas de Jogo}
@@ -96,71 +99,94 @@ O jogo opera em um sistema de turnos alternados entre o jogador e o dragão. Par
 Esta combinação de saída textual e gráfica proporciona uma experiência completa, onde o console fornece informações detalhadas sobre as mecânicas do jogo enquanto o display visual oferece feedback imediato sobre o estado da batalha.
 
 \subsection{Sistema de Combate}
-O combate é baseado em turnos. O jogador tem acesso a seis ações distintas:
+O combate é baseado em turnos. O jogador tem acesso a sete ações distintas, cada uma com custo de stamina específico:
 \begin{enumerate}
-    \item \textbf{Ataque Normal}: Dano padrão com uma taxa de acerto equilibrada (80\%), dano: 10-19 HP (25 crítico).
-    \item \textbf{Espada (Sword)}: Um movimento tático que atordoa o dragão, fazendo-o perder um turno, mas não causa dano direto. Taxa de acerto: 40\%.
-    \item \textbf{Flanco (Flank)}: Um ataque de alto risco e alta recompensa com 40\% de chance de acerto crítico. Dano: 15-24 HP (30 crítico).
-    \item \textbf{Lança (Lance)}: Uma postura defensiva que causa menos dano (5-9 HP, 15 crítico), mas aumenta a evasão do jogador para o próximo turno.
-    \item \textbf{Quiz}: Uma habilidade especial que aciona uma pergunta sobre arquitetura de computadores.
-    \item \textbf{Estus Flask}: Um item consumível inspirado na icônica mecânica de recuperação de HP do jogo \textit{Dark Souls}, onde o jogador carrega frascos de uma substância curativa dourada chamada ``Estus''. No contexto deste jogo, as Estus Flasks funcionam como um recurso estratégico limitado: o jogador começa a batalha com apenas 2 frascos disponíveis. Ao usar uma flask, o guerreiro regenera 25 HP por turno durante 2 turnos consecutivos, totalizando 50 HP de cura se os dois turnos forem completados. Esta limitação força o jogador a tomar decisões táticas sobre quando usar este recurso precioso — usar cedo demais pode deixá-lo vulnerável mais tarde, enquanto esperar demais pode resultar em derrota.
+    \setcounter{enumi}{-1}
+    \item \textbf{Pular Turno (Skip)}: O jogador não realiza nenhuma ação, útil para regenerar stamina. Custo: 0 stamina.
+    \item \textbf{Escudo (Shield)}: Ativa um escudo que absorve 50 HP de dano. Enquanto o escudo está ativo, ações ofensivas (2-5) são bloqueadas. Use novamente para cancelar. Custo: 0 stamina.
+    \item \textbf{Espada (Sword)}: Um movimento tático que atordoa o dragão, fazendo-o perder um turno, e aplica juros compostos à dívida. Não causa dano direto. Custo: 25 stamina.
+    \item \textbf{Flanco (Flank)}: Um ataque de alto risco e alta recompensa com 40\% de chance de acerto crítico e dano aumentado (15-24 HP, 30 crítico). Taxa de acerto: 80\%. Custo: 40 stamina.
+    \item \textbf{Lança (Spear)}: Ataque animado com projétil que causa menos dano (5-9 HP, 15 crítico), mas aumenta a evasão do jogador para o próximo turno. Taxa de acerto: 80\%. Custo: 20 stamina.
+    \item \textbf{Conhecimento Arcano (Arcane Knowledge)}: Uma habilidade especial que aciona uma pergunta sobre arquitetura de computadores. Resposta correta aplica 5x juros compostos; resposta errada causa -5 HP de penalidade (absorvido pelo escudo se ativo). Custo: 50 stamina.
+    \item \textbf{Estus Flask}: Um item consumível inspirado na icônica mecânica de recuperação de HP do jogo \textit{Dark Souls}. O jogador começa com 2 frascos disponíveis. Ao usar, regenera 25 HP imediatamente e mais 25 HP por turno durante 2 turnos adicionais. Custo: 0 stamina.
 \end{enumerate}
 
 \begin{table}[h]
 \centering
-\caption{Taxas de Acerto do Jogador}
-\begin{tabular}{|l|c|c|c|c|}
+\caption{Habilidades do Jogador}
+\begin{tabular}{|l|c|c|c|c|c|}
 \hline
-\textbf{Ataque} & \textbf{Acerto (Normal)} & \textbf{Acerto (Dragão Voando)} & \textbf{Crítico} & \textbf{Dano} \\
+\textbf{Ação} & \textbf{Stamina} & \textbf{Acerto} & \textbf{Acerto (Voando)} & \textbf{Crítico} & \textbf{Dano/Efeito} \\
 \hline
-Normal & 80\% & 50\% & 15\% & 10-19 (25 crit) \\
+Pular & 0 & -- & -- & -- & Nenhum \\
 \hline
-Espada & 40\% & 20\% & -- & Atordoa \\
+Escudo & 0 & -- & -- & -- & Absorve 50 HP \\
 \hline
-Flanco & 80\% & 50\% & 40\% & 15-24 (30 crit) \\
+Espada & 25 & 100\% & 100\% & -- & Atordoa dragão \\
 \hline
-Lança & 80\% & 50\% & 15\% & 5-9 (15 crit) \\
+Flanco & 40 & 80\% & 50\% & 40\% & 15-24 (30 crit) \\
+\hline
+Lança & 20 & 80\% & 50\% & 15\% & 5-9 (15 crit) + Evasão \\
+\hline
+C. Arcano & 50 & -- & -- & -- & 5x juros / -5 HP \\
+\hline
+Estus & 0 & -- & -- & -- & +25 HP/turno (3x) \\
 \hline
 \end{tabular}
 \end{table}
 
-O Dragão atua como o oponente de IA com quatro comportamentos aleatórios (25\% cada):
+O Dragão atua como o oponente de IA. A cada turno, seleciona aleatoriamente entre quatro ataques (25\% cada), mas deve ter stamina suficiente para executá-los. Se não houver stamina para nenhum ataque, entra em postura de defesa.
 \begin{itemize}
-    \item \textbf{Sopro de Fogo}: Ataque padrão com dano de 25-40 HP (60 crítico). Taxa de acerto: 35\% com 15\% de chance de crítico.
-    \item \textbf{Pisar (Stomp)}: Atordoa o jogador, reduzindo a dívida em 5\%. Sem dano direto.
-    \item \textbf{Voar (Fly)}: Aumenta a evasão do dragão, tornando-o mais difícil de acertar. Requer 50+ para acertar no próximo turno.
-    \item \textbf{Inferno}: Um ataque devastador que causa 45-65 HP de dano com 80\% de taxa de acerto, ignorando a maioria dos bônus de evasão do jogador.
+    \item \textbf{Sopro de Fogo} (20 stamina): Ataque animado com projétil de bola de fogo. Dano de 25-40 HP (60 crítico). Taxa de acerto: 35\% (50\% se jogador tiver evasão) com 15\% de chance de crítico. Reduz a dívida em 5\% ao acertar.
+    \item \textbf{Pisar (Stomp)} (30 stamina): Atordoa o jogador, fazendo-o perder um turno. Reduz a dívida em 5\%. Sem dano direto.
+    \item \textbf{Voar (Fly)} (25 stamina): Aumenta a evasão do dragão. O jogador precisa de 50+ para acertar no próximo turno (reduz acerto de 80\% para 50\%). O dragão é renderizado em posição elevada (Y=140).
+    \item \textbf{Inferno} (50 stamina): Ataque em duas fases. No primeiro turno, o dragão ``acumula fogo'' (exibe sprite de preparação). No turno seguinte, desencadeia o ataque devastador com 80\% de acerto e 45-65 HP de dano. Reduz a dívida em 5\% ao acertar.
+    \item \textbf{Postura de Defesa} (0 stamina): Fallback automático quando o dragão não tem stamina para nenhum ataque. Exibe sprite de defesa e aguarda regeneração de stamina.
 \end{itemize}
 
 \begin{table}[h]
 \centering
-\caption{Taxas de Acerto do Dragão}
-\begin{tabular}{|l|c|c|c|c|}
+\caption{Habilidades do Dragão}
+\begin{tabular}{|l|c|c|c|c|c|}
 \hline
-\textbf{Ataque} & \textbf{Acerto (Normal)} & \textbf{Acerto (Jogador Evasivo)} & \textbf{Crítico} & \textbf{Dano} \\
+\textbf{Ataque} & \textbf{Stamina} & \textbf{Acerto} & \textbf{Acerto (Evasivo)} & \textbf{Crítico} & \textbf{Dano/Efeito} \\
 \hline
-Sopro de Fogo & 35\% & 50\% & 15\% & 25-40 (60 crit) \\
+Sopro de Fogo & 20 & 35\% & 50\% & 15\% & 25-40 (60 crit) \\
 \hline
-Pisar & 100\% & 100\% & -- & Atordoa \\
+Pisar & 30 & 100\% & 100\% & -- & Atordoa jogador \\
 \hline
-Voar & 100\% & 100\% & -- & Nenhum \\
+Voar & 25 & 100\% & 100\% & -- & +Evasão dragão \\
 \hline
-Inferno & 80\% & 80\% & -- & 45-65 \\
+Inferno & 50 & 80\% & 80\% & -- & 45-65 (2 turnos) \\
+\hline
+Defesa & 0 & -- & -- & -- & Aguarda stamina \\
 \hline
 \end{tabular}
 \end{table}
 
+\subsection{Sistema de Stamina}
+Uma mecânica de gerenciamento de recursos que adiciona profundidade estratégica ao combate:
+\begin{itemize}
+    \item \textbf{Stamina Máxima}: Tanto o jogador quanto o dragão possuem 100 pontos de stamina.
+    \item \textbf{Regeneração}: A cada início de turno, 15 pontos de stamina são regenerados automaticamente (não excede 100).
+    \item \textbf{Custo de Habilidades}: Cada habilidade possui um custo específico de stamina. Se o personagem não tiver stamina suficiente, a ação falha e exibe uma mensagem de erro.
+    \item \textbf{Custos do Jogador}: Pular/Escudo/Estus (0), Lança (20), Espada (25), Flanco (40), Conhecimento Arcano (50).
+    \item \textbf{Custos do Dragão}: Sopro de Fogo (20), Voar (25), Pisar (30), Inferno (50).
+    \item \textbf{Barra Visual}: Barras de stamina azuis são exibidas abaixo das barras de HP no display gráfico.
+    \item \textbf{Fallback do Dragão}: Quando o dragão não possui stamina para nenhum ataque, automaticamente entra em postura de defesa.
+\end{itemize}
+
 \subsection{Sistema de Dívida de Juros Compostos}
-Uma mecânica única envolvendo um "Contador de Dívida".
+Uma mecânica única envolvendo um ``Contador de Dívida''.
 \begin{itemize}
     \item \textbf{Crescimento}: Cada vez que o jogador acerta um golpe, o contador de dívida cresce 10\% mais um valor base de 100.
     \item \textbf{Redução}: Quando o dragão atinge o jogador, a dívida é reduzida em 5\%, simulando um revés.
-    \item \textbf{Vitória}: Se o contador de dívida atingir 10.000, o jogador vence imediatamente via "Vitória por Juros Compostos".
-    \item \textbf{Inspiração}: Esta mecânica foi inspirada nas habilidades do personagem Knuckle Bine, do anime \textit{Hunter x Hunter}, onde o acumulo de "juros" de aura leva à derrota do oponente.
+    \item \textbf{Vitória}: Se o contador de dívida atingir 10.000, o jogador vence imediatamente via ``Vitória por Juros Compostos''.
+    \item \textbf{Inspiração}: Esta mecânica foi inspirada nas habilidades do personagem Knuckle Bine, do anime \textit{Hunter x Hunter}, onde o acúmulo de ``juros'' de aura leva à derrota do oponente.
 \end{itemize}
 
-\subsection{Quiz Educacional}
-O jogo integra conteúdo educacional diretamente na jogabilidade. A ação "Quiz" apresenta perguntas aleatórias sobre Arquitetura de Computadores (ex: sobre ULA, RAM, Barramentos).
+\subsection{Conhecimento Arcano (Sistema Educacional)}
+O jogo integra conteúdo educacional diretamente na jogabilidade. A ação ``Conhecimento Arcano'' apresenta perguntas aleatórias sobre Arquitetura de Computadores (ex: sobre ULA, RAM, Barramentos).
 \begin{itemize}
     \item \textbf{Resposta Correta}: Aplica a fórmula de juros compostos 5 vezes instantaneamente, fornecendo um grande impulso para a condição de vitória por dívida.
     \item \textbf{Resposta Errada}: Penaliza o jogador com perda de HP.
@@ -196,7 +222,7 @@ O jogo utiliza extensivamente a chamada de sistema (syscall) 42 para gerar núme
     \item Sucesso do ataque (cálculos de Acerto/Erro).
     \item Acertos críticos.
     \item Escolhas da IA do Dragão.
-    \item Seleção de perguntas do Quiz.
+    \item Seleção de perguntas do Conhecimento Arcano.
 \end{itemize}
 
 \subsection{Ambiente de Teste}
