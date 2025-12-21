@@ -94,9 +94,32 @@ player_can_act:
     syscall
     move $t0, $v0
     
-    # Check which action (1=Attack, 2=Sword, 3=Flank, 4=Lance, 5=Quiz, 6=Estus Flask)
+    # Check which action (1=Shield, 2=Sword, 3=Flank, 4=Spear, 5=Quiz, 6=Estus Flask)
     li $t1, 1
-    beq $t0, $t1, player_normal_attack
+    beq $t0, $t1, player_prepare_shield
+    
+    # --- SHIELD RESTRICTIONS FOR OFFENSIVE ACTIONS ---
+    lw $t2, warriorShield
+    beqz $t2, not_shielded
+    
+    # Check if choice is offensive or restricted (2, 3, 4, or 5)
+    li $t1, 2
+    beq $t0, $t1, shield_error
+    li $t1, 3
+    beq $t0, $t1, shield_error
+    li $t1, 4
+    beq $t0, $t1, shield_error
+    li $t1, 5
+    beq $t0, $t1, shield_error
+    j not_shielded
+
+shield_error:
+    li $v0, 4
+    la $a0, msg_shield_error
+    syscall
+    j player_can_act
+
+not_shielded:
     li $t1, 2
     beq $t0, $t1, player_sword_attack
     li $t1, 3

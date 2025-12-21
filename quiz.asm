@@ -281,10 +281,9 @@ quiz_wrong:
     la $a0, msg_quiz_wrong
     syscall
     
-    # Reduce player HP by 5 as penalty
-    lw $t0, playerHP
-    addi $t0, $t0, -5
-    sw $t0, playerHP
+    # Reduce player HP by 5 as penalty (with shield)
+    li $a0, 5
+    jal apply_damage_to_player
     
     # Apply compound interest once
     jal apply_compound_interest

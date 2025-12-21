@@ -67,13 +67,25 @@ draw_player_unit:
     blez $t0, player_unit_defeated
     
     # Check if spear animation is active
+    # Check if fireball animation is active (Spear/Normal Warrior)
     lw $t0, spear_attack_active
     bnez $t0, player_unit_spear_pose
+
+    # Check if warrior is shielded
+    lw $t0, warriorShield
+    bgtz $t0, player_unit_shield_pose
 
     # Normal standing warrior
     li $a0, 50             # X
     li $a1, 185            # Y
     la $a2, sprite_player
+    jal draw_sprite_pro
+    j done_player_unit
+
+    player_unit_shield_pose:
+    li $a0, 50             # X
+    li $a1, 185            # Y
+    la $a2, warrior_shield
     jal draw_sprite_pro
     j done_player_unit
     
@@ -112,6 +124,10 @@ draw_dragon_unit:
     # Check if fireball animation is active (Dragon Inferno Pose)
     lw $t0, fireball_attack_active
     bnez $t0, dragon_unit_inferno_pose
+    
+    # Check if dragon is preparing Inferno
+    lw $t0, dragonPreparingInferno
+    bnez $t0, dragon_unit_prep_pose
 
     # Check if dragon is flying
     lw $t0, dragonFlying
@@ -128,15 +144,25 @@ draw_dragon_unit:
     jal draw_sprite_pro
     j done_dragon_unit
     
+    dragon_unit_prep_pose:
+    li $a0, 180            # X
+    li $a1, 185            # Y
+    la $a2, sprite_dragon_preparing_inferno
+    jal draw_sprite_pro
+    j done_dragon_unit
+    
     dragon_unit_inferno_pose:
-    li $a0, 180            # X - Same as normal dragon (64x34)
-    li $a1, 185            # Y - Same as normal dragon
+    li $a0, 180            # X - Same as normal dragon
+    li $a1, 185            # Y - Grounded
     la $a2, sprite_dragon_inferno
     jal draw_sprite_pro
     
-    # Also draw the fireball if animation is active
+    # Only draw the fireball if animation is active
+    lw $t0, fireball_attack_active
+    beqz $t0, done_dragon_unit
+    
     lw $a0, fireballX
-    li $a1, 175            # Height of the fireball
+    li $a1, 185            # Height of the fireball (grounded)
     la $a2, fireball
     jal draw_sprite_pro
     j done_dragon_unit
@@ -255,25 +281,25 @@ erase_spear_trail:
 # OPTIMIZATION: ERASE FIREBALL TRAIL (moves Right to Left)
 # ----------------------------------------------------------------
 erase_fireball_trail:
-    # $a0 = old X position to erase (erases the strip at X + 64)
+    # $a0 = old X position to erase (erases the strip at X + 48)
     addi $sp, $sp, -4
     sw $ra, 0($sp)
     
-    addi $t0, $a0, 64      # Erase at the trailing edge (Right side)
+    addi $t0, $a0, 48      # Erase at the trailing edge (Right side)
     
-    # Sky part (Y: 175 to 200)
+    # Sky part (Y: 185 to 200)
     move $a0, $t0
-    li $a1, 175
+    li $a1, 185
     li $a2, 10             # Erasure width matching speed
-    li $v1, 25
+    li $v1, 15             # 15 pixels sky
     lw $a3, COLOR_SKY
     jal func_draw_rect
     
-    # Ground part (Y: 200 to 209)
+    # Ground part (Y: 200 to 210)
     move $a0, $t0
     li $a1, 200
     li $a2, 10
-    li $v1, 9              # 34 total height - 25 sky = 9 ground
+    li $v1, 10             # 10 pixels ground (Total 25)
     lw $a3, COLOR_GROUND
     jal func_draw_rect
     
@@ -404,6 +430,49 @@ show_status:
     li $v0, 1
     lw $a0, playerHP
     syscall
+    
+    # Show Shield if active
+    lw $t0, warriorShield
+    beqz $t0, skip_show_shield
+    li $v0, 4
+    la $a0, msg_estus_count # Just using a space or label if I had one, but I'll just print it directly
+    # Wait, I don't have a " | Shield: " message. I'll add it to data.asm or just use what I have.
+    # I'll just skip the label for now and print " [SHIELD: X]"
+    li $v0, 11
+    li $a0, 32 # space
+    syscall
+    li $a0, 91 # [
+    syscall
+    li $v0, 4
+    la $a0, msg_shield_absorbed # "Shield absorbed damage! Remaining shield: " - too long.
+    # I'll just add a new message to data.asm.
+    
+    # Actually, I'll just print " [SHIELD: " and the value.
+    li $v0, 11
+    li $a0, 83 # S
+    syscall
+    li $a0, 72 # H
+    syscall
+    li $a0, 73 # I
+    syscall
+    li $a0, 69 # E
+    syscall
+    li $a0, 76 # L
+    syscall
+    li $a0, 68 # D
+    syscall
+    li $a0, 58 # :
+    syscall
+    li $a0, 32 # space
+    syscall
+    li $v0, 1
+    lw $a0, warriorShield
+    syscall
+    li $v0, 11
+    li $a0, 93 # ]
+    syscall
+    
+skip_show_shield:
     li $v0, 4
     la $a0, msg_player_debt
     syscall

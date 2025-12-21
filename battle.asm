@@ -11,31 +11,29 @@
 # ----------------------------------------------------------------
 # PLAYER ATTACKS
 # ----------------------------------------------------------------
-player_normal_attack:
+player_prepare_shield:
+    lw $t0, warriorShield
+    bgtz $t0, cancel_shield
+    
     li $v0, 4
-    la $a0, msg_player_atk
+    la $a0, msg_player_shield
     syscall
+    
+    # Set shield to 50 HP absorption
+    li $t1, 50
+    sw $t1, warriorShield
+    j done_shield_toggle
 
-    # Check if dragon is flying (increased evasion)
-    lw $t0, dragonFlying
-    move $a0, $t0
-    jal calculate_attack_damage
-    move $s0, $v0
-    
-    # Reset dragon flying status after attack
+cancel_shield:
+    li $v0, 4
+    la $a0, msg_shield_cancel
+    syscall
+    sw $zero, warriorShield
+
+done_shield_toggle:
+    # Reset dragon flying status and player evasion
     sw $zero, dragonFlying
-    # Reset player evasion after attack
     sw $zero, playerEvasion
-    
-    # Reduce Monster HP
-    lw $t1, monsterHP
-    sub $t1, $t1, $s0
-    sw $t1, monsterHP
-    
-    # Apply Compound Interest on Debt Counter (only if attack hit)
-    blez $s0, skip_debt_player
-    jal apply_compound_interest
-    skip_debt_player:
 
     li $t0, 1
     sw $t0, turn
@@ -254,8 +252,12 @@ monster_turn:
     j game_loop
 
 dragon_can_act:
+    # Check if dragon is preparing Inferno
+    lw $t0, dragonPreparingInferno
+    bnez $t0, dragon_inferno_unleash
+
     # Dragon randomly chooses attack type
-    # 25% Fire Breath, 25% Stomp, 25% Fly, 25% Inferno (new devastating attack)
+    # 25% Fire Breath, 25% Stomp, 25% Fly, 25% Inferno
     li $v0, 42
     li $a0, 0
     li $a1, 4
@@ -264,7 +266,7 @@ dragon_can_act:
     
     beq $t0, 1, dragon_stomp
     beq $t0, 2, dragon_fly
-    beq $t0, 3, dragon_inferno
+    beq $t0, 3, dragon_inferno_prep
     
     # Fire Breath Attack (default case 0)
     li $v0, 4
@@ -279,10 +281,9 @@ dragon_can_act:
     jal calculate_dragon_damage
     move $s0, $v0
 
-    # Reduce Player HP
-    lw $t1, playerHP
-    sub $t1, $t1, $s0
-    sw $t1, playerHP
+    # Reduce Player HP (with Shield)
+    move $a0, $s0
+    jal apply_damage_to_player
     
     # Apply Dragon Debt Payment (only if attack hit)
     # Dragon pays 5% of current debt
@@ -330,6 +331,26 @@ dragon_fly:
     sw $t0, turn
     j game_loop
 
+dragon_inferno_prep:
+    # Set preparation flag
+    li $t1, 1
+    sw $t1, dragonPreparingInferno
+    
+    # Show message
+    li $v0, 4
+    la $a0, msg_dragon_prepare_inferno
+    syscall
+    
+    # Change turn to player
+    li $t0, 0
+    sw $t0, turn
+    j game_loop
+
+dragon_inferno_unleash:
+    # Reset preparation flag
+    sw $zero, dragonPreparingInferno
+    # Fall through to dragon_inferno
+    
 dragon_inferno:
     # Inferno attack - devastating fire attack that ignores some defense
     li $v0, 4
@@ -370,10 +391,9 @@ dragon_inferno:
     
     move $s0, $t9
     
-    # Reduce Player HP
-    lw $t1, playerHP
-    sub $t1, $t1, $s0
-    sw $t1, playerHP
+    # Reduce Player HP (with Shield)
+    move $a0, $s0
+    jal apply_damage_to_player
     
     # Apply Dragon Debt Payment
     jal apply_dragon_payment
@@ -599,6 +619,67 @@ apply_compound_interest:
     
     lw $ra, 0($sp)
     addi $sp, $sp, 4
+    jr $ra
+
+# ----------------------------------------------------------------
+# APPLY DAMAGE TO PLAYER (with Shield Absorption)
+# $a0 = Raw Damage
+# ----------------------------------------------------------------
+apply_damage_to_player:
+    addi $sp, $sp, -8
+    sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    
+    move $s0, $a0          # $s0 = damage to apply
+    lw $t0, warriorShield
+    
+    # Reset shield if it's our turn starting (handled in player_prepare_shield)
+    # but here we just process absorption
+    
+    beqz $t0, skip_shield_logic
+    
+    # Shield is active
+    bge $t0, $s0, shield_fully_absorbs
+    
+    # Shield partially absorbs
+    sub $s0, $s0, $t0      # damage = damage - shield
+    sw $zero, warriorShield
+    
+    li $v0, 4
+    la $a0, msg_shield_absorbed
+    syscall
+    li $v0, 1
+    li $a0, 0
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+    j skip_shield_logic
+
+shield_fully_absorbs:
+    sub $t0, $t0, $s0      # shield = shield - damage
+    sw $t0, warriorShield
+    li $s0, 0              # damage = 0
+    
+    li $v0, 4
+    la $a0, msg_shield_absorbed
+    syscall
+    li $v0, 1
+    move $a0, $t0
+    syscall
+    li $v0, 4
+    la $a0, newline
+    syscall
+
+skip_shield_logic:
+    # Apply remaining damage to HP
+    lw $t1, playerHP
+    sub $t1, $t1, $s0
+    sw $t1, playerHP
+    
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    addi $sp, $sp, 8
     jr $ra
 
 apply_compound_interest_direct:
