@@ -96,39 +96,23 @@ player_turn:
     j game_loop
     
 player_can_act:
-    # Check if shield is active - show different menu
-    lw $t2, warriorShield
-    beqz $t2, show_normal_menu
-    
-    # Shield is active - show shielded menu
-    li $v0, 4
-    la $a0, msg_choose_action_shielded
-    syscall
-    j get_player_input
-
-show_normal_menu:
-    # Show normal action menu
+    # Show action menu
     li $v0, 4
     la $a0, msg_choose_action
     syscall
-    
 get_player_input:
     # Get player input
     li $v0, 5
     syscall
     move $t0, $v0
     
-    # Check which action (0=Skip, 1=Shield, 2=Sword, 3=Flank, 4=Spear, 5=Quiz, 6=Estus Flask, 7=Hold Shield)
+    # Check which action (0=Skip, 1=Shield, 2=Sword, 3=Flank, 4=Spear, 5=Quiz, 6=Estus Flask)
     
     # Check if player chose to skip turn (0)
     beqz $t0, player_skip_turn
     
     li $t1, 1
     beq $t0, $t1, player_prepare_shield
-    
-    # Check if player chose to hold shield (7)
-    li $t1, 7
-    beq $t0, $t1, player_hold_shield
     
     # --- SHIELD RESTRICTIONS FOR OFFENSIVE ACTIONS ---
     lw $t2, warriorShield

@@ -44,28 +44,6 @@ done_shield_toggle:
     j game_loop
 
 # ----------------------------------------------------------------
-# HOLD SHIELD - Skip turn while keeping shield active
-# ----------------------------------------------------------------
-player_hold_shield:
-    # Check if shield is actually active
-    lw $t0, warriorShield
-    beqz $t0, player_can_act  # No shield active, go back to menu
-    
-    # Display hold shield message
-    li $v0, 4
-    la $a0, msg_shield_skip
-    syscall
-    
-    # Keep shield active, just end turn
-    li $t0, 1
-    sw $t0, turn
-    
-    li $v0, 32
-    li $a0, 500 # wait 500ms
-    syscall
-    j game_loop
-
-# ----------------------------------------------------------------
 # SKIP TURN - Player chooses to do nothing
 # ----------------------------------------------------------------
 player_skip_turn:
