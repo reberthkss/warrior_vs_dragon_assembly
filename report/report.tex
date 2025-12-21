@@ -57,7 +57,7 @@ O protagonista é um guerreiro medieval controlado pelo jogador. Ele possui:
     \item \textbf{Posição no Display}: Lado esquerdo da tela (X=50, Y=185)
     \item \textbf{Sprites}: Múltiplas poses incluindo postura normal, com escudo, lançando lança e derrotado
     \item \textbf{Recursos}: 2 Estus Flasks para recuperação de HP
-    \item \textbf{Habilidades}: 7 ações disponíveis (Pular Turno, Escudo, Espada, Flanco, Lança, Conhecimento Arcano e Estus Flask)
+    \item \textbf{Habilidades}: 7 ações disponíveis (Pular Turno, Escudo, Rede, Flanco, Lança, Conhecimento Arcano e Estus Flask)
 \end{itemize}
 
 \subsection{O Dragão (Inimigo)}
@@ -104,7 +104,7 @@ O combate é baseado em turnos. O jogador tem acesso a sete ações distintas, c
     \setcounter{enumi}{-1}
     \item \textbf{Pular Turno (Skip)}: O jogador não realiza nenhuma ação, útil para regenerar stamina. Custo: 0 stamina.
     \item \textbf{Escudo (Shield)}: Ativa um escudo que absorve 50 HP de dano. Enquanto o escudo está ativo, ações ofensivas (2-5) são bloqueadas. Use novamente para cancelar. Custo: 0 stamina.
-    \item \textbf{Espada (Sword)}: Um movimento tático que atordoa o dragão, fazendo-o perder um turno, e aplica juros compostos à dívida. Não causa dano direto. Custo: 25 stamina.
+    \item \textbf{Rede (Net)}: Um movimento tático que lança uma rede para capturar o dragão, fazendo-o perder um turno, e aplica juros compostos à dívida. Não causa dano direto. Taxa de acerto: 60\% (40\% se dragão estiver voando). Custo: 25 stamina.
     \item \textbf{Flanco (Flank)}: Um ataque de alto risco e alta recompensa com 40\% de chance de acerto crítico e dano aumentado (15-24 HP, 30 crítico). Taxa de acerto: 80\%. Custo: 40 stamina.
     \item \textbf{Lança (Spear)}: Ataque animado com projétil que causa menos dano (5-9 HP, 15 crítico), mas aumenta a evasão do jogador para o próximo turno. Taxa de acerto: 80\%. Custo: 20 stamina.
     \item \textbf{Conhecimento Arcano (Arcane Knowledge)}: Uma habilidade especial que aciona uma pergunta sobre arquitetura de computadores. Resposta correta aplica 5x juros compostos; resposta errada causa -5 HP de penalidade (absorvido pelo escudo se ativo). Custo: 50 stamina.
@@ -122,7 +122,7 @@ Pular & 0 & -- & -- & -- & Nenhum \\
 \hline
 Escudo & 0 & -- & -- & -- & Absorve 50 HP \\
 \hline
-Espada & 25 & 100\% & 100\% & -- & Atordoa dragão \\
+Rede & 25 & 60\% & 40\% & -- & Captura dragão \\
 \hline
 Flanco & 40 & 80\% & 50\% & 40\% & 15-24 (30 crit) \\
 \hline

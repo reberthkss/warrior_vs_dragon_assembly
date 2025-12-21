@@ -133,6 +133,10 @@ draw_dragon_unit:
     # Check if dragon is in defense stance
     lw $t0, dragonDefense
     bnez $t0, dragon_unit_defense_pose
+    
+    # Check if dragon is trapped in net
+    lw $t0, dragonOnNet
+    bnez $t0, dragon_unit_on_net_pose
 
     # Check if dragon is flying
     lw $t0, dragonFlying
@@ -153,6 +157,13 @@ draw_dragon_unit:
     li $a0, 180            # X
     li $a1, 185            # Y
     la $a2, sprite_dragon_defense
+    jal draw_sprite_pro
+    j done_dragon_unit
+    
+    dragon_unit_on_net_pose:
+    li $a0, 180            # X
+    li $a1, 185            # Y
+    la $a2, prite_dragon_on_net
     jal draw_sprite_pro
     j done_dragon_unit
     

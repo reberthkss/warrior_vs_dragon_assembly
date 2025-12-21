@@ -25,7 +25,8 @@
     turnCounter:    .word 1           # Current turn number (starts at 1)
     playerStunned:  .word 0           # 0 = Not stunned, 1 = Stunned
     dragonFlying:   .word 0           # 0 = On ground, 1 = Flying (increased evasion)
-    dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
+    dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Net ability)
+    dragonOnNet:    .word 0           # 0 = Free, 1 = Trapped in net
     dragonDefense:  .word 0           # 0 = Normal, 1 = Defense stance (reduces damage taken)
     playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Spear ability)
     warriorShield:  .word 0           # Shield absorption HP (e.g., 50)
@@ -39,7 +40,7 @@
     
     # Stamina costs - Player
     staminaCostShield:  .word 0
-    staminaCostSword:   .word 25
+    staminaCostNet:     .word 25
     staminaCostFlank:   .word 40
     staminaCostSpear:   .word 20
     staminaCostQuiz:    .word 50
@@ -126,8 +127,8 @@
     msg_start:      .asciiz "\n>>>=== FULL HD BATTLE (Unit 1) ===<<<\n"
     msg_start_info: .asciiz "[!] Victory Conditions: Defeat Dragon OR reach 10,000 Debt!\n"
     msg_player_atk: .asciiz "\n>>> [PLAYER] You attacked! "
-    msg_player_sword:.asciiz "\n>>> [PLAYER] You used SWORD!\n"
-    msg_player_sword_success:.asciiz "\n*** The dragon is STUNNED! ***\n"
+    msg_player_net:.asciiz "\n>>> [PLAYER] You launched a NET!\n"
+    msg_player_net_success:.asciiz "\n*** The dragon is TRAPPED! ***\n"
     msg_player_flank:.asciiz "\n>>> [PLAYER] You used FLANK! "
     msg_player_spear:.asciiz "\n>>> [PLAYER] You used SPEAR! Your evasion is increased!\n"
     msg_player_quiz:.asciiz "\n*** --- AOC QUIZ TIME! --- ***\n"
@@ -147,7 +148,7 @@
     msg_damage:     .asciiz ">> Damage dealt: "
     msg_miss:       .asciiz "-- ATTACK MISSED! --\n"
     msg_crit:       .asciiz "*** CRITICAL HIT!!! *** "
-    msg_choose_action: .asciiz "\n[PLAYER] Choose: (0)Skip (1)Shield (2)Sword (3)Flank (4)Spear (5)Arcano (6)Estus - "
+    msg_choose_action: .asciiz "\n[PLAYER] Choose: (0)Skip (1)Shield (2)Net (3)Flank (4)Spear (5)Arcano (6)Estus - "
     msg_player_skip: .asciiz "\n>>> [PLAYER] You take a moment to catch your breath...\n"
     msg_dragon_skip: .asciiz "\n<<< [DRAGON] The dragon hesitates and watches carefully...\n"
     msg_player_shield: .asciiz "\n>>> [PLAYER] You prepared your shield! (50 HP Absorption)\n"

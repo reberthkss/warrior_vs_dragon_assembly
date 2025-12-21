@@ -106,7 +106,7 @@ get_player_input:
     syscall
     move $t0, $v0
     
-    # Check which action (0=Skip, 1=Shield, 2=Sword, 3=Flank, 4=Spear, 5=Quiz, 6=Estus Flask)
+    # Check which action (0=Skip, 1=Shield, 2=Net, 3=Flank, 4=Spear, 5=Arcano, 6=Estus Flask)
     
     # Check if player chose to skip turn (0)
     beqz $t0, player_skip_turn
@@ -137,7 +137,7 @@ shield_error:
 
 not_shielded:
     li $t1, 2
-    beq $t0, $t1, player_sword_attack
+    beq $t0, $t1, player_net_attack
     li $t1, 3
     beq $t0, $t1, player_flank_attack
     li $t1, 4

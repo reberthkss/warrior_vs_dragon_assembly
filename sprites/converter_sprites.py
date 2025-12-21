@@ -10,6 +10,7 @@ ASSETS = [
     # ("warrior_spear.png",    "warrior_spear", 48),   
     # ("spear.png",    "spear", 48),   
     # ("sprite_warrior_shield.png", "warrior_shield", 48),   
+    # ("warrior_launching_net.png", "sprite_warrior_launching_net", 54),   
     
     # DRAGON SRPITEES
     # ("dragon.png",    "sprite_dragon", 110)   
@@ -17,7 +18,8 @@ ASSETS = [
     # ("dragon_fireball.png",    "sprite_dragon_fireball", 48),   
     # ("fireball.png",    "fireball", 48),   
     # ("sprite_dragon_preparing_inferno.png",    "sprite_dragon_preparing_inferno", 48),   
-    ("dragon_defense.png",    "sprite_dragon_defense", 48),   
+    # ("dragon_defense.png",    "sprite_dragon_defense", 48),   
+    ("dragon_on_net.png",    "sprite_dragon_on_net", 48),   
 
 
 ]

@@ -61,20 +61,20 @@ player_skip_turn:
     syscall
     j game_loop
 
-player_sword_attack:
+player_net_attack:
     # Check stamina cost (25)
     lw $t0, playerStamina
-    lw $t1, staminaCostSword
+    lw $t1, staminaCostNet
     blt $t0, $t1, insufficient_stamina
     sub $t0, $t0, $t1
     sw $t0, playerStamina
     
-    # Sword ability - stuns the dragon (no damage)
+    # Net ability - traps and stuns the dragon (no damage)
     li $v0, 4
-    la $a0, msg_player_sword
+    la $a0, msg_player_net
     syscall
     
-    # Calculate hit chance (40% base hit rate)
+    # Calculate hit chance (60% base hit rate)
     lw $t8, dragonFlying
     li $v0, 42
     li $a0, 0
@@ -82,24 +82,25 @@ player_sword_attack:
     syscall
     move $t0, $v0
     # Check if dragon is not flying (normal hit chance)
-    beqz $t8, sword_normal_hit_check
-    # Check if dragon is flying (needs 30+ to hit)
-    blt $t0, 80, sword_missed
-    j sword_hit
+    beqz $t8, net_normal_hit_check
+    # Check if dragon is flying (needs 60+ to hit = 40% success)
+    blt $t0, 60, net_missed
+    j net_hit
     
-    sword_normal_hit_check:
-    blt $t0, 60, sword_missed
+    net_normal_hit_check:
+    blt $t0, 40, net_missed
     
-    sword_hit:
-    # Set dragon as stunned
+    net_hit:
+    # Set dragon as stunned and trapped
     li $v0, 4
-    la $a0, msg_player_sword_success
+    la $a0, msg_player_net_success
     syscall 
     
     li $t0, 1
     sw $t0, dragonStunned
+    sw $t0, dragonOnNet
     
-    # No HP damage for sword ability, but increases debt counter
+    # No HP damage for net ability, but increases debt counter
     lw $t1, debtCounter
     lw $a0, interestRate
     lw $a1, baseDamage
@@ -107,15 +108,15 @@ player_sword_attack:
     move $t1, $v0
     sw $t1, debtCounter
     
-    j sword_end
+    j net_end
     
-    sword_missed:
-    # Sword attack missed
+    net_missed:
+    # Net attack missed
     li $v0, 4
     la $a0, msg_miss
     syscall
     
-    sword_end:
+    net_end:
     # Reset dragon flying status and player evasion
     sw $zero, dragonFlying
     sw $zero, playerEvasion
@@ -288,8 +289,9 @@ monster_turn:
     la $a0, msg_dragon_stunned
     syscall
     
-    # Reset stun status
+    # Reset stun status and net trap
     sw $zero, dragonStunned
+    sw $zero, dragonOnNet
     
     # Change to player turn
     li $t0, 0
