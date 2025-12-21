@@ -65,6 +65,24 @@ player_hold_shield:
     syscall
     j game_loop
 
+# ----------------------------------------------------------------
+# SKIP TURN - Player chooses to do nothing
+# ----------------------------------------------------------------
+player_skip_turn:
+    # Display skip message
+    li $v0, 4
+    la $a0, msg_player_skip
+    syscall
+    
+    # End turn
+    li $t0, 1
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500 # wait 500ms
+    syscall
+    j game_loop
+
 player_sword_attack:
     # Check stamina cost (25)
     lw $t0, playerStamina
@@ -362,8 +380,16 @@ try_dragon_inferno:
 
 dragon_skip_no_stamina:
     # Dragon has no stamina for any attack, skip turn
+    li $v0, 4
+    la $a0, msg_dragon_skip
+    syscall
+    
     li $t0, 0
     sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500 # wait 500ms
+    syscall
     j game_loop
 
 do_dragon_fire:

@@ -118,7 +118,11 @@ get_player_input:
     syscall
     move $t0, $v0
     
-    # Check which action (1=Shield, 2=Sword, 3=Flank, 4=Spear, 5=Quiz, 6=Estus Flask, 7=Hold Shield)
+    # Check which action (0=Skip, 1=Shield, 2=Sword, 3=Flank, 4=Spear, 5=Quiz, 6=Estus Flask, 7=Hold Shield)
+    
+    # Check if player chose to skip turn (0)
+    beqz $t0, player_skip_turn
+    
     li $t1, 1
     beq $t0, $t1, player_prepare_shield
     
