@@ -49,6 +49,7 @@ render_ui:
     addi $sp, $sp, -4
     sw $ra, 0($sp)
     jal draw_hp_bars
+    jal draw_stamina_bars
     jal draw_turn_cursor
     lw $ra, 0($sp)
     addi $sp, $sp, 4
@@ -222,6 +223,46 @@ draw_hp_bars:
     jal func_draw_rect
     
     done_hp_bars:
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    jr $ra
+
+draw_stamina_bars:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    # Player stamina bar (below HP bar at Y=180)
+    lw $t0, playerStamina
+    blez $t0, skip_player_stamina_bar
+    div $t0, $t0, 2        # Scale to max 50 pixels
+    mflo $a2
+    blez $a2, skip_player_stamina_bar
+    li $a0, 50
+    li $a1, 180            # Below HP bar (175)
+    li $v1, 3              # Height 3 pixels
+    lw $a3, COLOR_STAMINA
+    jal func_draw_rect
+    skip_player_stamina_bar:
+
+    # Dragon stamina bar (below dragon HP bar)
+    lw $t0, dragonStamina
+    blez $t0, done_stamina_bars
+    div $t0, $t0, 2        # Scale to max 50 pixels
+    mflo $a2
+    blez $a2, done_stamina_bars
+    li $a0, 180
+    lw $t1, dragonFlying
+    beqz $t1, stamina_dragon_ground
+    li $a1, 135            # Flying position
+    j do_draw_dragon_stamina
+    stamina_dragon_ground:
+    li $a1, 180            # Ground position
+    do_draw_dragon_stamina:
+    li $v1, 3
+    lw $a3, COLOR_STAMINA
+    jal func_draw_rect
+
+    done_stamina_bars:
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra
@@ -431,6 +472,14 @@ show_status:
     lw $a0, playerHP
     syscall
     
+    # Show Player Stamina
+    li $v0, 4
+    la $a0, msg_player_stamina
+    syscall
+    li $v0, 1
+    lw $a0, playerStamina
+    syscall
+    
     # Show Shield if active
     lw $t0, warriorShield
     beqz $t0, skip_show_shield
@@ -496,6 +545,15 @@ skip_show_shield:
     li $v0, 1
     lw $a0, monsterHP
     syscall
+    
+    # Show Dragon Stamina
+    li $v0, 4
+    la $a0, msg_dragon_stamina
+    syscall
+    li $v0, 1
+    lw $a0, dragonStamina
+    syscall
+    
     li $v0, 4
     la $a0, newline
     syscall

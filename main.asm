@@ -2,6 +2,9 @@
 # MAIN.ASM - Warrior vs Dragon Battle Game
 # ============================================
 
+# Declare main as global entry point FIRST
+.globl main
+
 # --- INCLUDE ALL MODULES (centralized) ---
 .include "include_all.asm"
 
@@ -9,7 +12,6 @@
 # MAIN
 # ----------------------------------------------------------------
 .text
-.globl main
 
 main:
     li $v0, 4
@@ -56,6 +58,16 @@ game_loop:
 # PLAYER TURN
 # ----------------------------------------------------------------
 player_turn:
+    # Regenerate player stamina at start of turn
+    lw $t0, playerStamina
+    lw $t1, staminaRegen
+    add $t0, $t0, $t1
+    lw $t2, playerMaxStamina
+    blt $t0, $t2, store_player_stamina
+    move $t0, $t2
+    store_player_stamina:
+    sw $t0, playerStamina
+
     # Increment turn counter at start of player's turn (new round)
     lw $t0, turnCounter
     addi $t0, $t0, 1

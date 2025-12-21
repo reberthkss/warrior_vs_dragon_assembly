@@ -44,6 +44,13 @@ done_shield_toggle:
     j game_loop
 
 player_sword_attack:
+    # Check stamina cost (25)
+    lw $t0, playerStamina
+    lw $t1, staminaCostSword
+    blt $t0, $t1, insufficient_stamina
+    sub $t0, $t0, $t1
+    sw $t0, playerStamina
+    
     # Sword ability - stuns the dragon (no damage)
     li $v0, 4
     la $a0, msg_player_sword
@@ -104,6 +111,13 @@ player_sword_attack:
     j game_loop
 
 player_flank_attack:
+    # Check stamina cost (40)
+    lw $t0, playerStamina
+    lw $t1, staminaCostFlank
+    blt $t0, $t1, insufficient_stamina
+    sub $t0, $t0, $t1
+    sw $t0, playerStamina
+    
     # Flank ability - higher critical chance and increased base damage
     li $v0, 4
     la $a0, msg_player_flank
@@ -139,6 +153,13 @@ player_flank_attack:
     j game_loop
 
 player_lance_attack:
+    # Check stamina cost (20)
+    lw $t0, playerStamina
+    lw $t1, staminaCostSpear
+    blt $t0, $t1, insufficient_stamina
+    sub $t0, $t0, $t1
+    sw $t0, playerStamina
+    
     # Lance ability - defensive, increases evasion, lower damage
     li $v0, 4
     la $a0, msg_player_spear
@@ -226,6 +247,16 @@ spear_anim_loop:
 # DRAGON ATTACKS
 # ----------------------------------------------------------------
 monster_turn:
+    # Regenerate dragon stamina at start of turn
+    lw $t0, dragonStamina
+    lw $t1, staminaRegen
+    add $t0, $t0, $t1
+    lw $t2, dragonMaxStamina
+    blt $t0, $t2, store_dragon_stamina
+    move $t0, $t2
+    store_dragon_stamina:
+    sw $t0, dragonStamina
+
     li $v0, 32
     li $a0, 1000
     syscall
@@ -257,18 +288,64 @@ dragon_can_act:
     bnez $t0, dragon_inferno_unleash
 
     # Dragon randomly chooses attack type
-    # 25% Fire Breath, 25% Stomp, 25% Fly, 25% Inferno
+    # 25% Fire Breath (20), 25% Stomp (30), 25% Fly (25), 25% Inferno (50)
     li $v0, 42
     li $a0, 0
     li $a1, 4
     syscall
     move $t0, $a0
-    
-    beq $t0, 1, dragon_stomp
-    beq $t0, 2, dragon_fly
-    beq $t0, 3, dragon_inferno_prep
-    
-    # Fire Breath Attack (default case 0)
+
+    # Check selected attack and validate stamina
+    beq $t0, 0, try_dragon_fire
+    beq $t0, 1, try_dragon_stomp
+    beq $t0, 2, try_dragon_fly
+    beq $t0, 3, try_dragon_inferno
+    j try_dragon_fire  # Default fallback
+
+try_dragon_fire:
+    # Fire costs 20 stamina
+    lw $t1, dragonStamina
+    lw $t2, staminaCostFire
+    blt $t1, $t2, try_dragon_fly  # Try cheaper attack
+    sub $t1, $t1, $t2
+    sw $t1, dragonStamina
+    j do_dragon_fire
+
+try_dragon_stomp:
+    # Stomp costs 30 stamina
+    lw $t1, dragonStamina
+    lw $t2, staminaCostStomp
+    blt $t1, $t2, try_dragon_fire  # Try cheaper attack
+    sub $t1, $t1, $t2
+    sw $t1, dragonStamina
+    j dragon_stomp
+
+try_dragon_fly:
+    # Fly costs 25 stamina
+    lw $t1, dragonStamina
+    lw $t2, staminaCostFly
+    blt $t1, $t2, dragon_skip_no_stamina  # No stamina for any attack
+    sub $t1, $t1, $t2
+    sw $t1, dragonStamina
+    j dragon_fly
+
+try_dragon_inferno:
+    # Inferno costs 50 stamina
+    lw $t1, dragonStamina
+    lw $t2, staminaCostInferno
+    blt $t1, $t2, try_dragon_stomp  # Try cheaper attack
+    sub $t1, $t1, $t2
+    sw $t1, dragonStamina
+    j dragon_inferno_prep
+
+dragon_skip_no_stamina:
+    # Dragon has no stamina for any attack, skip turn
+    li $t0, 0
+    sw $t0, turn
+    j game_loop
+
+do_dragon_fire:
+    # Fire Breath Attack
     li $v0, 4
     la $a0, msg_monster_atk
     syscall
@@ -877,3 +954,12 @@ dragon_fireball_animation:
     lw $ra, 0($sp)
     addi $sp, $sp, 4
     jr $ra
+
+# ----------------------------------------------------------------
+# INSUFFICIENT STAMINA HANDLER
+# ----------------------------------------------------------------
+insufficient_stamina:
+    li $v0, 4
+    la $a0, msg_low_stamina
+    syscall
+    j player_can_act

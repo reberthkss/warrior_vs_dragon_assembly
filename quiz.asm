@@ -10,6 +10,13 @@
 # QUIZ ABILITY
 # ----------------------------------------------------------------
 player_quiz_attack:
+    # Check stamina cost (50)
+    lw $t0, playerStamina
+    lw $t1, staminaCostQuiz
+    blt $t0, $t1, insufficient_stamina
+    sub $t0, $t0, $t1
+    sw $t0, playerStamina
+    
     # Quiz ability - player must answer a question correctly
     # Check if all quizzes are completed
     lw $t0, quizAllCompleted

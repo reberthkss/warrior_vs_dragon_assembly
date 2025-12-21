@@ -14,6 +14,7 @@
     COLOR_HP_FULL:  .word 0x00FF00    # Life Green
     COLOR_HP_DMG:   .word 0xFF0000    # Damage Red
     COLOR_CURSOR:   .word 0xFFFF00    # Yellow
+    COLOR_STAMINA:  .word 0x3399FF    # Blue for stamina bar
 
     # --- GAME VARIABLES ---
     playerHP:       .word 100
@@ -27,6 +28,27 @@
     dragonStunned:  .word 0           # 0 = Not stunned, 1 = Stunned (Sword ability)
     playerEvasion:  .word 0           # 0 = Normal evasion, 1 = Increased evasion (Spear ability)
     warriorShield:  .word 0           # Shield absorption HP (e.g., 50)
+    
+    # --- STAMINA SYSTEM ---
+    playerStamina:      .word 100     # Current player stamina
+    playerMaxStamina:   .word 100     # Max player stamina
+    dragonStamina:      .word 100     # Dragon's current stamina
+    dragonMaxStamina:   .word 100     # Dragon's max stamina
+    staminaRegen:       .word 15      # Stamina regenerated per turn
+    
+    # Stamina costs - Player
+    staminaCostShield:  .word 0
+    staminaCostSword:   .word 25
+    staminaCostFlank:   .word 40
+    staminaCostSpear:   .word 20
+    staminaCostQuiz:    .word 50
+    staminaCostEstus:   .word 0
+    
+    # Stamina costs - Dragon
+    staminaCostFire:    .word 20
+    staminaCostStomp:   .word 30
+    staminaCostFly:     .word 25
+    staminaCostInferno: .word 50
     spear_attack_active: .word 0      # 0 = normal, 1 = spear animation in progress
     spearX:              .word 0      # X position of spear during animation
     
@@ -104,7 +126,7 @@
     msg_start_info: .asciiz "[!] Victory Conditions: Defeat Dragon OR reach 10,000 Debt!\n"
     msg_player_atk: .asciiz "\n>>> [PLAYER] You attacked! "
     msg_player_sword:.asciiz "\n>>> [PLAYER] You used SWORD!\n"
-    msg_player_sword_success:.asciiz."\n*** The dragon is STUNNED! ***\n"
+    msg_player_sword_success:.asciiz "\n*** The dragon is STUNNED! ***\n"
     msg_player_flank:.asciiz "\n>>> [PLAYER] You used FLANK! "
     msg_player_spear:.asciiz "\n>>> [PLAYER] You used SPEAR! Your evasion is increased!\n"
     msg_player_quiz:.asciiz "\n*** --- AOC QUIZ TIME! --- ***\n"
@@ -147,4 +169,7 @@
     msg_hp_restored:.asciiz "[+] HP Restored: "
     msg_estus_active:.asciiz "[ESTUS ACTIVE] Rounds remaining: "
     msg_rounds_left:.asciiz "\n"
+    msg_low_stamina:.asciiz "\n[!] Not enough stamina for this action!\n"
+    msg_player_stamina:.asciiz " | Stamina: "
+    msg_dragon_stamina:.asciiz " | Stamina: "
     newline:        .asciiz "\n"
