@@ -70,6 +70,25 @@ player_net_attack:
     sw $t0, playerStamina
     
     # Net ability - traps and stuns the dragon (no damage)
+    # Set animation state
+    li $t0, 1
+    sw $t0, net_attack_active
+    
+    # Render to show throwing pose
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+    jal render_all
+    lw $ra, 0($sp)
+    addi $sp, $sp, 4
+    
+    # Wait to show animation
+    li $v0, 32
+    li $a0, 800
+    syscall
+    
+    # Reset animation state
+    sw $zero, net_attack_active
+    
     li $v0, 4
     la $a0, msg_player_net
     syscall
@@ -310,8 +329,58 @@ dragon_can_act:
     lw $t0, dragonPreparingInferno
     bnez $t0, dragon_inferno_unleash
 
-    # Dragon randomly chooses attack type
-    # 25% Fire Breath (20), 25% Stomp (30), 25% Fly (25), 25% Inferno (50)
+    # SMART AI: Check stamina levels for strategic decisions
+    lw $t1, dragonStamina
+    
+    # If stamina >= 50, prioritize Inferno (50% chance) or other attacks
+    li $t2, 50
+    bge $t1, $t2, dragon_high_stamina_decision
+    
+    # If stamina >= 35 but < 50, consider saving for Inferno (40% chance to skip)
+    li $t2, 35
+    bge $t1, $t2, dragon_accumulate_check
+    
+    # Low stamina: just pick best available attack
+    j dragon_low_stamina_decision
+
+dragon_high_stamina_decision:
+    # Has enough for Inferno - 50% chance to use it, 50% other attacks
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $a0
+    blt $t0, 50, try_dragon_inferno  # 50% Inferno
+    blt $t0, 70, try_dragon_stomp    # 20% Stomp
+    blt $t0, 85, try_dragon_fire     # 15% Fire
+    j try_dragon_fly                  # 15% Fly
+
+dragon_accumulate_check:
+    # Stamina is 35-49: 40% chance to skip and accumulate for Inferno
+    li $v0, 42
+    li $a0, 0
+    li $a1, 100
+    syscall
+    move $t0, $a0
+    blt $t0, 40, dragon_accumulate_stamina  # 40% chance to save stamina
+    j dragon_low_stamina_decision            # 60% attack normally
+
+dragon_accumulate_stamina:
+    # Dragon saves stamina for a big attack
+    li $v0, 4
+    la $a0, msg_dragon_skip
+    syscall
+    
+    li $t0, 0
+    sw $t0, turn
+    
+    li $v0, 32
+    li $a0, 500
+    syscall
+    j game_loop
+
+dragon_low_stamina_decision:
+    # Pick random attack from affordable options
     li $v0, 42
     li $a0, 0
     li $a1, 4

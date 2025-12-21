@@ -71,6 +71,10 @@ draw_player_unit:
     # Check if fireball animation is active (Spear/Normal Warrior)
     lw $t0, spear_attack_active
     bnez $t0, player_unit_spear_pose
+    
+    # Check if net attack animation is active
+    lw $t0, net_attack_active
+    bnez $t0, player_unit_net_pose
 
     # Check if warrior is shielded
     lw $t0, warriorShield
@@ -100,6 +104,13 @@ draw_player_unit:
     lw $a0, spearX
     li $a1, 175            # Height of the spear throw
     la $a2, spear
+    jal draw_sprite_pro
+    j done_player_unit
+
+    player_unit_net_pose:
+    li $a0, 50             # X
+    li $a1, 185            # Y
+    la $a2, sprite_warrior_launching_net
     jal draw_sprite_pro
     j done_player_unit
 

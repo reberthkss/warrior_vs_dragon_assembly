@@ -53,6 +53,7 @@
     staminaCostInferno: .word 50
     spear_attack_active: .word 0      # 0 = normal, 1 = spear animation in progress
     spearX:              .word 0      # X position of spear during animation
+    net_attack_active:   .word 0      # 0 = normal, 1 = net launch animation
     
     fireball_attack_active: .word 0   # 0 = normal, 1 = fireball animation in progress
     fireballX:              .word 0   # X position of fireball
